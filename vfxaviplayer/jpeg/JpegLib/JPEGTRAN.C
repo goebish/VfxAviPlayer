@@ -29,6 +29,8 @@
  * different JPEG file formats.
  */
 
+#ifdef COMPILE_JPEG_EXAMPLE
+
 #include "cdjpeg.h"		/* Common decls for cjpeg/djpeg applications */
 #include "jversion.h"		/* for version message */
 
@@ -251,3 +253,4 @@ main (int argc, char **argv)
   exit(jsrcerr.num_warnings + jdsterr.num_warnings ?EXIT_WARNING:EXIT_SUCCESS);
   return 0;			/* suppress no-return-value warnings */
 }
+#endif

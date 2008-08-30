@@ -150,7 +150,7 @@ BYTE * JpegFile::JpegFileToRGB(char* fileName,
 		return NULL;
 	}
 	//goeb : quickly check jpg filetype
-	char jpeg_sig[10] = {0xFF,0xD8,0xFF,0xE0,0x00,0x10,0x4A,0x46,0x49,0x46};
+	char jpeg_sig[10] = {(char)0xFF,(char)0xD8,(char)0xFF,(char)0xE0,(char)0x00,(char)0x10,(char)0x4A,(char)0x46,(char)0x49,(char)0x46};
 	char file_sig[10];
 	fread( &file_sig,10,1,infile);
 	for(int i=0;i<3;i++) // 3 firsts bytes only ... will have to find something better
