@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "jpeg\JpegFile.h"
 #include "gif\cgif.h"
+#include "png\pngfile.h"
 
 #define MAXMEM 1024*1024*200 // 200MB Max
 #define MAXINDEX 1024*100 // 100K bufferized frames max
@@ -132,8 +133,8 @@ void alphasort( char **str, const int &strnum )
 // this is where we deal with the configuration screen
 static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if( uMsg!=WM_INITDIALOG && g_ConfigThis->isLoading) // this ugly thing cause the interface not take care of inputs sometime .. especialy when auto mode is enabled on ANY instance of the ape
-	;//	return FALSE;
+	//if( uMsg!=WM_INITDIALOG && g_ConfigThis->isLoading) // this ugly thing cause the interface not take care of inputs sometime .. especialy when auto mode is enabled on ANY instance of the ape
+	//;//	return FALSE;
 	
 	switch (uMsg)
 	{
@@ -265,7 +266,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					if (ChooseColor(&cs))
 					{
 						*a = ((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
-						int R,G,B;
+						//int R,G,B;
 						//R= cs.rgbResult&0xff;
 						//G= (cs.rgbResult&0xff00)>>8;
 						//B= (cs.rgbResult&0xff0000)>>16;
