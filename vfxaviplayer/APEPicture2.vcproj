@@ -448,18 +448,6 @@
 					RelativePath=".\gif\cgif.cpp"
 					>
 				</File>
-				<File
-					RelativePath=".\gif\gif.cpp"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-				</File>
 			</Filter>
 		</Filter>
 		<Filter
@@ -564,18 +552,6 @@
 				<File
 					RelativePath=".\gif\cgif.h"
 					>
-				</File>
-				<File
-					RelativePath=".\gif\gif.h"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCustomBuildTool"
-						/>
-					</FileConfiguration>
 				</File>
 			</Filter>
 		</Filter>

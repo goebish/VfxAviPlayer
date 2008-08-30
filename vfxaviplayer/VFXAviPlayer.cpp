@@ -266,12 +266,12 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					{
 						*a = ((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
 						int R,G,B;
-						R= cs.rgbResult&0xff;
-						G= (cs.rgbResult&0xff00)>>8;
-						B= (cs.rgbResult&0xff0000)>>16;
-						g_ConfigThis->Rd=R; // desired R
-						g_ConfigThis->Gd=G; // desired G
-						g_ConfigThis->Bd=B; // desired B
+						//R= cs.rgbResult&0xff;
+						//G= (cs.rgbResult&0xff00)>>8;
+						//B= (cs.rgbResult&0xff0000)>>16;
+						g_ConfigThis->Rd=cs.rgbResult&0xff; // desired R
+						g_ConfigThis->Gd=(cs.rgbResult&0xff00)>>8; // desired G
+						g_ConfigThis->Bd=(cs.rgbResult&0xff0000)>>16; // desired B
 					}
 					InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);   
 					break;
