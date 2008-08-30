@@ -52,7 +52,8 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				EnableFiberSafeOptimizations="true"
-				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS"
+				AdditionalIncludeDirectories=".\zlib"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS;ZLIB_WINAPI"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="false"
@@ -152,7 +153,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS"
+				AdditionalIncludeDirectories=".\zlib"
+				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;WIN32;_DEBUG;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS;ZLIB_WINAPI"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
@@ -449,6 +451,164 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="zlib"
+				>
+				<File
+					RelativePath=".\zlib\adler32.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\compress.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\crc32.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\deflate.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\example.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\infback.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inffast.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inflate.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inftrees.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\minigzip.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\trees.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\uncompr.c"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\zutil.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="png"
+				>
+				<File
+					RelativePath=".\png\example.c"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath=".\png\png.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngerror.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngfile.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pnggccrd.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngget.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngmem.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngpread.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngread.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngrio.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngrtran.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngrutil.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngset.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngtest.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngtrans.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngvcrd.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngwio.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngwrite.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngwtran.c"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngwutil.c"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
@@ -551,6 +711,70 @@
 				>
 				<File
 					RelativePath=".\gif\cgif.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="zlib"
+				>
+				<File
+					RelativePath=".\zlib\crc32.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\deflate.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inffast.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inffixed.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inflate.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\inftrees.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\trees.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\zconf.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\zconf.in.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\zlib.h"
+					>
+				</File>
+				<File
+					RelativePath=".\zlib\zutil.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="png"
+				>
+				<File
+					RelativePath=".\png\png.h"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngconf.h"
+					>
+				</File>
+				<File
+					RelativePath=".\png\pngfile.h"
 					>
 				</File>
 			</Filter>
