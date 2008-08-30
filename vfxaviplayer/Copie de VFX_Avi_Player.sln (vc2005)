@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VFXAviPlayer", "APEPicture2.vcproj", "{E840E685-C679-4A57-A0FF-6D93A233737F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E840E685-C679-4A57-A0FF-6D93A233737F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E840E685-C679-4A57-A0FF-6D93A233737F}.Debug|Win32.Build.0 = Debug|Win32
+		{E840E685-C679-4A57-A0FF-6D93A233737F}.Release|Win32.ActiveCfg = Release|Win32
+		{E840E685-C679-4A57-A0FF-6D93A233737F}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
