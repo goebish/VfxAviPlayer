@@ -92,7 +92,8 @@ struct apeconfig { // vars config (loaded/saved)
 enum e_currentMode{
 	modeVideo,
 	modeJpeg,
-	modeGif
+	modeGif,
+	modePng
 };
 
 static char *outputs[] = { "Replace", "Additive", "Maximum", "Minimum", "50/50", "Subtractive1", "Subtractive2", "Multiply", "Xor", "Adjustable", "Ignore","Default renderer" };
