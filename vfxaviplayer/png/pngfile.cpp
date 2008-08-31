@@ -252,14 +252,20 @@ BOOL PngLoadImage (PTSTR pstrFileName, png_byte **ppbImageData,
         
         // read the additional chunks in the PNG file (not really needed)
         
-        png_read_end(png_ptr, NULL);
+        // goeb , better to pass info_ptr here
+		png_read_end(png_ptr, info_ptr/*NULL*/);
         
-        // and we're done
+        
+		// goeb : free more things bordel !!!! (should tell to libpng team ?)
+		// reste encore une _petite_ (8ko/image?) fuite .... :/
+		png_destroy_read_struct (&png_ptr, &info_ptr, (png_infopp) NULL);
+		png_destroy_info_struct (png_ptr, &info_ptr);
+		// and we're done
         
         free (ppbRowPointers);
-        ppbRowPointers = NULL;
-        
-        // yepp, done
+        ppbRowPointers = NULL;  
+			
+		// yepp, done
     }
 
     // goeb : oh shit !
