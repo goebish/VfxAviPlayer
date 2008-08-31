@@ -1,4 +1,9 @@
-
+// TODO
+// webcam input
+// no reload_image calling in wndproc
+// gif local palette
+// animated gif
+// transition/fading between 2 files
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>
@@ -152,6 +157,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					if (p >= 0) {
 						g_ConfigThis->curfile=p;
 						SendMessage(h, CB_GETLBTEXT, p, (LPARAM)g_ConfigThis->config.image);
+						// todo: stop calling reload_image from here to avoid crappy buffer between 2 files, better to have a flag telling render() it's time to reload !
 						g_ConfigThis->reload_image(); // not safe to call this in DlgProc ?
 					}
 					break;
@@ -772,17 +778,10 @@ void C_VFXAVIPLAYER::reload_image() {
 void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
 {
 	static BYTE              *pbImage=NULL;
-    static int                cxWinSize, cyWinSize;
-    static int                cxImgSize, cyImgSize;
-    static int                cImgChannels;
-    static png_color          bkgColor = {127, 127, 127};
+    int                cxImgSize, cyImgSize;
+    int                cImgChannels;
+    png_color          bkgColor = {127, 127, 127};
 
-	// todo: free memory
-	/*if (pbImage)
-    {
-        free (&pbImage); // &pbImage ?
-        *pbImage = NULL;
-    }*/
 	if(pJpegData)
 	{
 		free(pJpegData);
@@ -796,6 +795,19 @@ void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
 		pictureChannels=cImgChannels;
 		pJpegData = (char*)malloc( pictureHeight*pictureWidth*cImgChannels);
 		memcpy( pJpegData, pbImage, pictureHeight*pictureWidth*cImgChannels);
+		
+		png_byte **ppbImage = &pbImage;
+		
+		if (*ppbImage)
+		{
+			free (*ppbImage); // grr reste une fuite de mémoire dans PngLoadImage (8ko/image?, pas tt le temps, résolu ???)
+			*ppbImage = NULL;
+		}
+		if( pbImage)
+		{
+			free(pbImage);
+			pbImage=NULL;
+		}
 	}
 }
 
@@ -1169,15 +1181,18 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			switch(currentMode)
 			{
 				case modePng:
+					// todo: test 8 bits pngs
 					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*pictureChannels);
 					R=pJpegData[pixbase];
 					G=pJpegData[++pixbase];
 					B=pJpegData[++pixbase];
 					
-					if(pictureChannels==4)
+					if(pictureChannels==4) // alpha channel
 					{
 						frame_output = OUT_ADJUSTABLE;
 						adjustable = 255-pJpegData[++pixbase];
+						// todo: correct blending
+						//framebuffer[fbpos]=colorblend((framebuffer[fbpos]+(B|G<<8|R<<16))/2, B|G<<8|R<<16, 255-pJpegData[++pixbase]);
 					}
 					break;
 			
@@ -1190,7 +1205,6 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 
 				case modeGif:
 					pixbase=sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth));
-					
 					R = palR[pGifData[pixbase]];
 					G = palG[pGifData[pixbase]];
 					B = palB[pGifData[pixbase]];
