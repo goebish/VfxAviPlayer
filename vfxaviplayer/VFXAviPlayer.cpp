@@ -720,14 +720,27 @@ C_VFXAVIPLAYER::~C_VFXAVIPLAYER()
 ////////////////////////////////////////
 void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 {
-	return;
 	switch(mode)
 	{
 		case modeVideo:
-			EnableWindow( GetDlgItem( hwndDlg, IDC_GROUP_SPEED), 1); // don't work :(
+			EnableWindow( GetDlgItem( hwndDlg, IDC_SPEED), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_RESET_SPEED), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_REVERSE_ON_BEAT), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_SKIPONBEAT), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_FRAMESKIP), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_FRAMESKIP_ONBEAT), TRUE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_END), TRUE);
 			break;
 		case modeJpeg:
-			EnableWindow( GetDlgItem( hwndDlg, IDC_GROUP_SPEED), 0);
+		case modePng:
+		case modeGif:
+			EnableWindow( GetDlgItem( hwndDlg, IDC_SPEED), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_RESET_SPEED), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_REVERSE_ON_BEAT), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_SKIPONBEAT), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_FRAMESKIP), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_FRAMESKIP_ONBEAT), FALSE);
+			EnableWindow( GetDlgItem( hwndDlg, IDC_END), FALSE);
 			break;
 	}
 }
@@ -788,7 +801,7 @@ void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
 		pJpegData=NULL;
 	}
 	
-	if(PngLoadImage ((char*)szFile, &pbImage, &cxImgSize, &cyImgSize, &cImgChannels, &bkgColor));
+	if(PngLoadImage ((char*)szFile, &pbImage, &cxImgSize, &cyImgSize, &cImgChannels, &bkgColor))
 	{
 		pictureWidth = cxImgSize;
 		pictureHeight= cyImgSize;
@@ -809,6 +822,7 @@ void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
 			pbImage=NULL;
 		}
 	}
+	colordepth=24; 
 }
 
 #define CGIFFF CGIF::
@@ -845,7 +859,7 @@ void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 	pictureHeight=sp->ImageDesc.Height;
 	pGifData = (char*)malloc( sp->ImageDesc.Width*sp->ImageDesc.Height+1);
 	CGIFFF GifColorType *co=cm->Colors, *ce=co+cm->ColorCount;
-	//char *p = (char*)malloc(769); // palette
+	// todo: find local palette
 	int palNum=0;
 	while (co!=ce) 
 	{ 
@@ -859,7 +873,7 @@ void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 		co++; */
 		co++;
 	}
-	// if (sp->transp!=-1) img->setTransp(sp->transp); // transparency color index
+	// if (sp->transp!=-1) img->setTransp(sp->transp); // todo : transparency color index
 	memcpy(pGifData, sp->RasterBits, sp->ImageDesc.Width*sp->ImageDesc.Height);
 	CGIFFF DGifCloseFile(giff); /* also frees memory structure */
 	//free(p);
@@ -1181,7 +1195,6 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			switch(currentMode)
 			{
 				case modePng:
-					// todo: test 8 bits pngs
 					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*pictureChannels);
 					R=pJpegData[pixbase];
 					G=pJpegData[++pixbase];
@@ -1191,7 +1204,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 					{
 						frame_output = OUT_ADJUSTABLE;
 						adjustable = 255-pJpegData[++pixbase];
-						// todo: correct blending
+						// todo: correct blending without changing frame_output value
 						//framebuffer[fbpos]=colorblend((framebuffer[fbpos]+(B|G<<8|R<<16))/2, B|G<<8|R<<16, 255-pJpegData[++pixbase]);
 					}
 					break;
