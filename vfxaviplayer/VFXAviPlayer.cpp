@@ -1,6 +1,8 @@
 // TODO
+// correct png blending
+// correct random, remembering already displayed files in folder
 // webcam input
-// no reload_image calling in wndproc
+// no reload_image calling in wndproc  --> done
 // gif local palette
 // animated gif
 // transition/fading between 2 files
@@ -59,6 +61,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		char *palData; // pointer to palette for 8 bits streams 
 		int pictureChannels; // bytes per pixels for png
 		bool isVideoLoaded;
+		bool reload;
 		int beatcount;	// beat counter for auto change every x beats
 		int lastchangetime; // time rememberer for auto change every x seconds & no reverse on beat before 500ms loading
 		int loopcount; // counter for auto change every x loops
@@ -158,7 +161,8 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 						g_ConfigThis->curfile=p;
 						SendMessage(h, CB_GETLBTEXT, p, (LPARAM)g_ConfigThis->config.image);
 						// todo: stop calling reload_image from here to avoid crappy buffer between 2 files, better to have a flag telling render() it's time to reload !
-						g_ConfigThis->reload_image(); // not safe to call this in DlgProc ?
+						//g_ConfigThis->reload_image(); // not safe to call this in DlgProc ?
+						g_ConfigThis->reload=true;
 					}
 					break;
 				case IDC_BLENDMODE: // new blend mode selected
@@ -678,6 +682,7 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	pGif=NULL;
 	pGifData=NULL;
 	hwndDlg=NULL;
+	reload=false;
 }
 
 
@@ -720,7 +725,8 @@ C_VFXAVIPLAYER::~C_VFXAVIPLAYER()
 ////////////////////////////////////////
 void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 {
-	switch(mode)
+	// todo: sendtimeout messages instead of EnableWindow (cause locks)
+	/*switch(mode)
 	{
 		case modeVideo:
 			EnableWindow( GetDlgItem( hwndDlg, IDC_SPEED), TRUE);
@@ -742,7 +748,7 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 			EnableWindow( GetDlgItem( hwndDlg, IDC_FRAMESKIP_ONBEAT), FALSE);
 			EnableWindow( GetDlgItem( hwndDlg, IDC_END), FALSE);
 			break;
-	}
+	}*/
 }
 
 /////////////////////////////////////////
@@ -1003,8 +1009,10 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 			framesbuffer=(char*)realloc(framesbuffer,width*height*3*(1+lastframe));
 	}
 	isIndexable&= framesbuffer!=NULL;
+	// todo: sendmessagetimeout instead
 	EnableWindow( GetDlgItem(hwndDlg, IDC_REVERSE_ON_BEAT), isIndexable);
 	config.frameskip = abs(config.frameskip);
+	// todo: sendmessagetimeout instead
 	SendDlgItemMessage( hwndDlg, IDC_FRAMESKIP, TBM_SETPOS, 1, config.frameskip);
 	isVideoLoaded=true;
 	frame=-1;
@@ -1066,6 +1074,13 @@ void C_VFXAVIPLAYER::GrabAVIFrame(int frame)
 int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
 	if(!config.enabled /*|| (!isVideoLoaded && !pJpegData )*/) return 0; // nothing to do
+	// todo: return if no file selected in combobox
+	if(reload)
+	{
+		reload_image();
+		reload=false;
+	}
+	
 	////////////////////////////
 	// auto change management //
 	////////////////////////////
@@ -1127,6 +1142,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				if( curtime-lastchangetime>750 && isIndexable) // wait 750ms before reverse on beat works
 				{
 					config.frameskip=-config.frameskip;
+					// todo : timeout
 					SendDlgItemMessage( hwndDlg, IDC_FRAMESKIP, TBM_SETPOS, 1, config.frameskip);
 				}
 				wasbeat=false;
@@ -1472,7 +1488,9 @@ void C_VFXAVIPLAYER::load_config(unsigned char *data, int len)
 		memset(&this->config, 0, sizeof(apeconfig));
 	}
 	PopulateFileList();
-	reload_image();
+	// todo: stop calling that from here, better to have a flag telling render it's time to reload_image
+	//reload_image();
+	reload=true;
 }
 
 
