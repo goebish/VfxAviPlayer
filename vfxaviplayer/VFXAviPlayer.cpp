@@ -10,6 +10,8 @@
 #include "gif\cgif.h"
 #include "png\pngfile.h"
 
+#pragma warning( disable : 4996 )
+
 #define MAXMEM 1024*1024*200 // 200MB Max
 #define MAXINDEX 1024*100 // 100K bufferized frames max
 
@@ -30,6 +32,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void reload_image();
 		void OpenJPEG(LPCSTR szFile);
 		void OpenGif(LPCSTR szFile);
+		void OpenPng(LPCSTR szFile);
 		void OpenAVI(LPCSTR szFile);
 		void GrabAVIFrame(int frame);
 		void PopulateFileList();
@@ -49,6 +52,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		char *pJpegData; // pointer to jpeg uncompressed frame buffer
 		char *pData; // pointer to avi uncompressed frame buffer
 		char *palData; // pointer to palette for 8 bits streams 
+		int pictureChannels; // bytes per pixels for png
 		bool isVideoLoaded;
 		int beatcount;	// beat counter for auto change every x beats
 		int lastchangetime; // time rememberer for auto change every x seconds & no reverse on beat before 500ms loading
@@ -751,11 +755,50 @@ void C_VFXAVIPLAYER::reload_image() {
 		OpenGif(buf);
 		currentMode = modeGif;
 	}
+	else if( (stricmp(ext, "png")==0 && GetFileAttributes(buf)!=INVALID_FILE_ATTRIBUTES))
+	{
+		OpenPng(buf);
+		currentMode = modePng;
+	}
 	setGUI(currentMode);
 	lastchangetime=timeGetTime();
 	LeaveCriticalSection(&critsec);
 	isLoading=false;
 }
+
+////////////////
+//  open png  //
+////////////////
+void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
+{
+	static BYTE              *pbImage=NULL;
+    static int                cxWinSize, cyWinSize;
+    static int                cxImgSize, cyImgSize;
+    static int                cImgChannels;
+    static png_color          bkgColor = {127, 127, 127};
+
+	// todo: free memory
+	/*if (pbImage)
+    {
+        free (&pbImage); // &pbImage ?
+        *pbImage = NULL;
+    }*/
+	if(pJpegData)
+	{
+		free(pJpegData);
+		pJpegData=NULL;
+	}
+	
+	if(PngLoadImage ((char*)szFile, &pbImage, &cxImgSize, &cyImgSize, &cImgChannels, &bkgColor));
+	{
+		pictureWidth = cxImgSize;
+		pictureHeight= cyImgSize;
+		pictureChannels=cImgChannels;
+		pJpegData = (char*)malloc( pictureHeight*pictureWidth*cImgChannels);
+		memcpy( pJpegData, pbImage, pictureHeight*pictureWidth*cImgChannels);
+	}
+}
+
 #define CGIFFF CGIF::
 ////////////////
 //  open gif  //
@@ -1089,6 +1132,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	if(currentMode==modeGif && pGifData==NULL)
 		return 0;
 
+	if(currentMode==modePng && pJpegData==NULL)
+		return 0;
+
 	int pixbase=0; 
 	UINT8 R=0,G=0,B=0;
 	UINT8 adjustable=(config.blend_value-2)*5;
@@ -1101,7 +1147,20 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	int fbpos=w*h;
 	int l=config.chromavalue/2; // chroma distance
 	l=l*l;
-	int sourcesize=pictureWidth*pictureHeight*3;
+
+	int sourcesize;
+	switch(currentMode)
+	{
+		case modeJpeg:
+			sourcesize=pictureWidth*pictureHeight*3;
+			break;
+		case modePng:
+			sourcesize=pictureWidth*pictureHeight*pictureChannels;
+			break;
+		case modeGif:
+			sourcesize=pictureWidth*pictureHeight;
+			break;
+	}
 	
 	for(int y=0;y<h;y++) {
 		for(int x=w-1;x>-1;x--) {
@@ -1109,15 +1168,28 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			fbpos--;
 			switch(currentMode)
 			{
+				case modePng:
+					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*pictureChannels);
+					R=pJpegData[pixbase];
+					G=pJpegData[++pixbase];
+					B=pJpegData[++pixbase];
+					
+					if(pictureChannels==4)
+					{
+						frame_output = OUT_ADJUSTABLE;
+						adjustable = 255-pJpegData[++pixbase];
+					}
+					break;
+			
 				case modeJpeg:
 					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*3);
-					R=pJpegData[pixbase];//&0xff;	// B from aviframe buffer
-					G=pJpegData[++pixbase];//&0xff; // G		""
-					B=pJpegData[++pixbase];//&0xff; // R		""
+					R=pJpegData[pixbase];
+					G=pJpegData[++pixbase];
+					B=pJpegData[++pixbase];
 					break;
 
 				case modeGif:
-					pixbase=sourcesize/3-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth));
+					pixbase=sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth));
 					
 					R = palR[pGifData[pixbase]];
 					G = palG[pGifData[pixbase]];
@@ -1292,6 +1364,24 @@ void C_VFXAVIPLAYER::PopulateFileList()
 		FindClose(h);
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.gif");
+		h = FindFirstFile(buf, &wfd);
+		if (h != INVALID_HANDLE_VALUE) 
+		{
+			bool rep = true;
+			while (rep) 
+			{
+				totfiles++;
+				strcpy(filename[totfiles-1],wfd.cFileName);
+				filelist[totfiles-1]=filename[totfiles-1];
+				if (!FindNextFile(h, &wfd)) 
+				{
+					rep = false;
+				}
+			};
+		}
+		FindClose(h);
+		strcpy(buf,config.avipath);
+		strcat(buf,"\\*.png");
 		h = FindFirstFile(buf, &wfd);
 		if (h != INVALID_HANDLE_VALUE) 
 		{

@@ -541,7 +541,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\png\pngfile.c"
+					RelativePath=".\png\pngfile.cpp"
 					>
 				</File>
 				<File
