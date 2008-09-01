@@ -1,8 +1,8 @@
 // TODO
 // correct png blending
 // correct random, remembering already displayed files in folder
+// put MMX routines directly into ::render instead of .h
 // webcam input
-// no reload_image calling in wndproc  --> done
 // gif local palette
 // animated gif
 // transition/fading between 2 files
@@ -145,11 +145,11 @@ void alphasort( char **str, const int &strnum )
 // this is where we deal with the configuration screen
 static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	//if( uMsg!=WM_INITDIALOG && g_ConfigThis->isLoading) // this ugly thing cause the interface not take care of inputs sometime .. especialy when auto mode is enabled on ANY instance of the ape
-	//;//	return FALSE;
-	
 	switch (uMsg)
 	{
+		case WM_USER+WM_ENABLE: // custom enable/disable control, avoid calling EnableWindow from main class
+			EnableWindow( GetDlgItem(hwndDlg, LOWORD(lParam)),LOWORD(wParam)); 
+			return 1;
 		case WM_COMMAND:
 			if (HIWORD(wParam) == CBN_SELCHANGE) { // combo change
 				HWND h = (HWND)lParam;
@@ -160,8 +160,6 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					if (p >= 0) {
 						g_ConfigThis->curfile=p;
 						SendMessage(h, CB_GETLBTEXT, p, (LPARAM)g_ConfigThis->config.image);
-						// todo: stop calling reload_image from here to avoid crappy buffer between 2 files, better to have a flag telling render() it's time to reload !
-						//g_ConfigThis->reload_image(); // not safe to call this in DlgProc ?
 						g_ConfigThis->reload=true;
 					}
 					break;
@@ -682,6 +680,7 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	pGif=NULL;
 	pGifData=NULL;
 	hwndDlg=NULL;
+	currentMode=modeVideo;
 	reload=false;
 }
 
@@ -1009,11 +1008,11 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 			framesbuffer=(char*)realloc(framesbuffer,width*height*3*(1+lastframe));
 	}
 	isIndexable&= framesbuffer!=NULL;
-	// todo: sendmessagetimeout instead
-	EnableWindow( GetDlgItem(hwndDlg, IDC_REVERSE_ON_BEAT), isIndexable);
+
+	DWORD res = 0;
+	SendMessageTimeout( hwndDlg, WM_ENABLE+WM_USER, isIndexable, IDC_REVERSE_ON_BEAT,SMTO_NORMAL,1000,&res); 
 	config.frameskip = abs(config.frameskip);
-	// todo: sendmessagetimeout instead
-	SendDlgItemMessage( hwndDlg, IDC_FRAMESKIP, TBM_SETPOS, 1, config.frameskip);
+	SendMessageTimeout( GetDlgItem( hwndDlg, IDC_FRAMESKIP), TBM_SETPOS, 1, config.frameskip, SMTO_NORMAL,1000,&res); 
 	isVideoLoaded=true;
 	frame=-1;
 	loopcount=0;
