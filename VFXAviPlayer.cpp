@@ -161,7 +161,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				g_ConfigThis->Rd = GetRValue(g_ConfigThis->tempcolor);
 				g_ConfigThis->Gd = GetGValue(g_ConfigThis->tempcolor);
 				g_ConfigThis->Bd = GetBValue(g_ConfigThis->tempcolor);
-				int *a;
+				int *a; 
 				a=&g_ConfigThis->config.chromakey;
 				*a = g_ConfigThis->tempcolor; //((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
 				InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);
@@ -173,6 +173,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			GetCursorPos(&point);
 			g_ConfigThis->tempcolor = GetPixel(hDC,point.x,point.y);
 			DeleteDC(hDC);
+			InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);
 			return 0;
 
 		case WM_LBUTTONDOWN:
@@ -483,7 +484,13 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			hBouton = GetDlgItem(hwndDlg, IDC_RESET);
 			hImage = LoadImage(g_ConfigThis->hInst, MAKEINTRESOURCE(IDB_RESET), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
 			SendMessage(hBouton, BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)(HANDLE)hImage);
+			// todo: free hImage ?
 			// todo: picker button bitmap
+			
+			hBouton = GetDlgItem(hwndDlg, IDC_PICKER);
+			hImage = LoadImage(g_ConfigThis->hInst, MAKEINTRESOURCE(IDB_PICKER), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+			SendMessage(hBouton, BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)(HANDLE)hImage);
+			
 			// Fill in blendmode lists
 			for (int i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
 				SendDlgItemMessage(hwndDlg, IDC_BLENDMODE, CB_ADDSTRING, 0, (LPARAM)outputs[i]);
@@ -609,11 +616,13 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				int w;
 				int color;
 				w=di->rcItem.right-di->rcItem.left;
-				color=g_ConfigThis->config.chromakey;
-				color = ((color>>16)&0xff)|(color&0xff00)|((color<<16)&0xff0000);
+				//color=g_ConfigThis->config.chromakey;
+				//color = ((color>>16)&0xff)|(color&0xff00)|((color<<16)&0xff0000);
 				
 				color = g_ConfigThis->Rd|g_ConfigThis->Gd<<8|g_ConfigThis->Bd<<16;
-				color = g_ConfigThis->tempcolor;
+				if(g_ConfigThis->tempcolor)
+					color = g_ConfigThis->tempcolor;
+				//color = g_ConfigThis->tempcolor;
 				// paint nifty color button
 				HBRUSH hBrush,hOldBrush;
 				LOGBRUSH lb={BS_SOLID,color,0};
@@ -623,10 +632,6 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				SelectObject(di->hDC,hOldBrush);
 				DeleteObject(hBrush);
 			}
-			/*else if (di->CtlID == IDC_PICKER)
-			{
-
-			}*/
 			return 0;
 		
 		case WM_DESTROY:
