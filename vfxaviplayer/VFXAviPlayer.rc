@@ -116,7 +116,7 @@ BEGIN
     CONTROL         "Reverse on beat",IDC_REVERSE_ON_BEAT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,51,177,65,10
     CONTROL         "videos",IDC_VIDEOS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,102,7,33,12
     CONTROL         "pictures",IDC_PICTURES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,141,7,41,12
-    CONTROL         "",IDC_PICKER,"Static",SS_ETCHEDFRAME,38,106,11,10
+    CONTROL         "",IDC_PICKER,"Static",SS_BLACKFRAME,38,106,9,9
 END
 
 
@@ -160,6 +160,7 @@ IDB_FOLDER_BITMAP       BITMAP                  "folder.bmp"
 IDB_PAUSE               BITMAP                  "pause.bmp"
 IDB_PLAY                BITMAP                  "play.bmp"
 IDB_RESET               BITMAP                  "reset.bmp"
+IDB_PICKER              BITMAP                  "picker.bmp"
 #endif    // French (France) resources
 /////////////////////////////////////////////////////////////////////////////
 
