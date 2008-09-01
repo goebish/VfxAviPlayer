@@ -1271,7 +1271,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				drawThisPixel = !(r*r+g*g+b*b < l);
 				if(config.invchroma) drawThisPixel=!drawThisPixel;
 			}
-
+	
 			// draw pixel
 			if(drawThisPixel) {
 				switch (frame_output) {
@@ -1313,6 +1313,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	}
 	_asm
 		emms;
+	
 	return 0;
 }
 

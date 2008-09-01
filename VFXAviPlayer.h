@@ -1,5 +1,6 @@
 // AVS APE (Plug-in Effect) header
 
+#pragma warning( disable : 4799 ) // MMX has no emms ...
 // base class to derive from
 class C_RBASE {
 	public:
