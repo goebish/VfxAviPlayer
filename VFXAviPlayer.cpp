@@ -1,5 +1,5 @@
 // TODO
-// fix rightmost column in picture modes
+// fix leftmost column in picture modes
 // fix Reverse on beat strange behavior
 // no more need for critsec ?
 // correct random, remembering already loaded files in folder
@@ -878,7 +878,7 @@ void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 ///////////////
 void C_VFXAVIPLAYER::OpenJPEG(LPCSTR szFile)
 {
-	// free buffer
+	// free buffer , todo : realloc instead
 	if(pJpegData)
 	{
 		free(pJpegData);
@@ -1098,9 +1098,8 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			strcpy(config.image,filelist[curfile]);
 			DWORD res;
 			SendMessageTimeout(GetDlgItem(hwndDlg,IDC_PICTURE),CB_SETCURSEL,curfile,0,SMTO_NORMAL,1000,&res); // fix [x2] problem !!!!!!!
-			//SendMessage(GetDlgItem(hwndDlg,IDC_PICTURE),CB_SETCURSEL,curfile,0);
 			strcpy(config.image,filelist[curfile]);
-			reload_image(); // may cause small access violation problems if user change the combobox at the same time (reload_image is not reentrant)			
+			reload_image(); 
 			lastframetime=timeGetTime();
 		}	
 	}// end auto change
@@ -1181,13 +1180,13 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	switch(currentMode)
 	{
 		case modeJpeg:
-			sourcesize=pictureWidth*pictureHeight*3;
+			sourcesize=pictureWidth*pictureHeight*3-3;
 			break;
 		case modePng:
-			sourcesize=pictureWidth*pictureHeight*pictureChannels;
+			sourcesize=pictureWidth*pictureHeight*pictureChannels-pictureChannels;
 			break;
 		case modeGif:
-			sourcesize=pictureWidth*pictureHeight;
+			sourcesize=pictureWidth*pictureHeight-1;
 			break;
 	}
 	
@@ -1199,6 +1198,8 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			{
 				case modePng:
 					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*pictureChannels);
+					if(pixbase<0)
+						pixbase=0;
 					R=pJpegData[pixbase];
 					G=pJpegData[++pixbase];
 					B=pJpegData[++pixbase];
