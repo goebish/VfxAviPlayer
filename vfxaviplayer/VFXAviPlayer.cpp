@@ -1,4 +1,5 @@
 // TODO
+// refresh combobox when clicking pictures/videos checkbox
 // fix rightmost column in picture modes
 // fix Reverse on beat strange behavior
 // correct random, remembering already loaded files in folder
@@ -196,44 +197,19 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 						// populate combobox & filelist
 						g_ConfigThis->totfiles=0;
 						SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_RESETCONTENT, 0, 0);
-						//WIN32_FIND_DATA wfd;
-						//HANDLE h;
 						char buf[MAX_PATH];
 						if(!strcmp(g_ConfigThis->config.avipath,"")) GetModuleFileName(g_hDllInstance, buf, MAX_PATH);
 						else strcpy(buf,g_ConfigThis->config.avipath);
 						g_ConfigThis->curfile=0;
-						
-						g_ConfigThis->PopulateFileList();
-						
-						//strcat(buf,"\\*.avi");
-						//h = FindFirstFile(buf, &wfd);
-						//if (h != INVALID_HANDLE_VALUE) 
-						{
-							//bool rep = true;
-							//while (rep) 
-							//{
-								//g_ConfigThis->totfiles++;
-								//int p = SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_ADDSTRING, 0, (LPARAM)wfd.cFileName);
-								//strcpy(g_ConfigThis->filename[g_ConfigThis->totfiles-1],wfd.cFileName);
-								//if (!FindNextFile(h, &wfd)) 
-								//{
-								//	rep = false;
-								//}
-							//}
-							//FindClose(h);
-							if(g_ConfigThis->totfiles>-1) 
-							{ //populate filelist
-								for(int i=0;i<g_ConfigThis->totfiles;i++) 
-								{
-									SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_ADDSTRING, 0, (LPARAM)(LPTSTR)g_ConfigThis->filename[i]);
-									strcpy(g_ConfigThis->filename[g_ConfigThis->totfiles-1],(LPTSTR)g_ConfigThis->filename[i]);
-
-									SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_GETLBTEXT, i, (LPARAM) (LPTSTR)g_ConfigThis->filename[i]);
-									g_ConfigThis->filelist[i]=g_ConfigThis->filename[i];
-								}
-								strcpy(g_ConfigThis->config.image,g_ConfigThis->filelist[0]);
-								g_ConfigThis->curfile=0;
+						g_ConfigThis->PopulateFileList();	
+						if(g_ConfigThis->totfiles>0) 
+						{ 	
+							for(int i=0;i<g_ConfigThis->totfiles;i++) 
+							{
+								SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_ADDSTRING, 0, (LPARAM)g_ConfigThis->filelist[i]);
 							}
+							strcpy(g_ConfigThis->config.image,g_ConfigThis->filelist[0]);
+							g_ConfigThis->curfile=0;
 						}
 					}
 					break;
@@ -569,9 +545,11 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 
 			// populate files combobox
 			if(g_ConfigThis->totfiles>0){
-				for(int i=0;i<g_ConfigThis->totfiles;i++){
+				for(int i=0;i<g_ConfigThis->totfiles;i++)
+				{
 					int p = SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_ADDSTRING, 0, (LPARAM)g_ConfigThis->filelist[i]);
-					if (stricmp(g_ConfigThis->filelist[i], g_ConfigThis->config.image) == 0) {
+					if (stricmp(g_ConfigThis->filelist[i], g_ConfigThis->config.image) == 0) 
+					{
 						SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_SETCURSEL, p, 0);
 					}
 				}
