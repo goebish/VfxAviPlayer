@@ -1,12 +1,13 @@
 // TODO
-// refresh combobox when clicking pictures/videos checkbox
 // fix rightmost column in picture modes
 // fix Reverse on beat strange behavior
+// no more need for critsec ?
 // correct random, remembering already loaded files in folder
 // put MMX routines directly into ::render instead of .h
 // webcam input
 // gif local palette
 // animated gif
+// color picker for color keying
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
 #include <windows.h>
@@ -256,10 +257,6 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					if (ChooseColor(&cs))
 					{
 						*a = ((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
-						//int R,G,B;
-						//R= cs.rgbResult&0xff;
-						//G= (cs.rgbResult&0xff00)>>8;
-						//B= (cs.rgbResult&0xff0000)>>16;
 						g_ConfigThis->Rd=cs.rgbResult&0xff; // desired R
 						g_ConfigThis->Gd=(cs.rgbResult&0xff00)>>8; // desired G
 						g_ConfigThis->Bd=(cs.rgbResult&0xff0000)>>16; // desired B
@@ -271,12 +268,23 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					g_ConfigThis->config.enabled = (SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED);
 					break;
 				case IDC_PICTURES: // button enable pictures
-					g_ConfigThis->config.enable_pictures = (SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					// TODO: filter combobox
-					break;
-				case IDC_VIDEOS: // button enable videos
-					g_ConfigThis->config.enable_videos = (SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					// TODO: filter combobox
+				case IDC_VIDEOS: // button enable videos				
+					g_ConfigThis->config.enable_pictures = (SendMessage( GetDlgItem(hwndDlg, IDC_PICTURES), BM_GETCHECK, 0, 0) == BST_CHECKED);
+					g_ConfigThis->config.enable_videos = (SendMessage(GetDlgItem(hwndDlg, IDC_VIDEOS), BM_GETCHECK, 0, 0) == BST_CHECKED);
+					SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_RESETCONTENT, 0, 0);
+					g_ConfigThis->PopulateFileList();
+					// populate files combobox
+					if(g_ConfigThis->totfiles>0)
+					{
+						for(int i=0;i<g_ConfigThis->totfiles;i++)
+						{
+							int p = SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_ADDSTRING, 0, (LPARAM)g_ConfigThis->filelist[i]);
+							if (stricmp(g_ConfigThis->filelist[i], g_ConfigThis->config.image) == 0) 
+							{
+								SendDlgItemMessage(hwndDlg, IDC_PICTURE, CB_SETCURSEL, p, 0);
+							}
+						}
+					}
 					break;
 				case IDC_LUMA_BLACK: // button luma key on black
 					g_ConfigThis->config.lumablack = (SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED);
@@ -1325,7 +1333,7 @@ void C_VFXAVIPLAYER::PopulateFileList()
 	WIN32_FIND_DATA wfd;
 	HANDLE h;
 	char buf[MAX_PATH];
-	//if(config.enable_videos)
+	if(config.enable_videos)
 	{
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.avi");
@@ -1346,7 +1354,7 @@ void C_VFXAVIPLAYER::PopulateFileList()
 		}
 		FindClose(h);
 	}
-	//if(config.enable_pictures)
+	if(config.enable_pictures)
 	{
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.jpg");
