@@ -1,11 +1,13 @@
 // TODO
-// correct png blending
-// correct random, remembering already displayed files in folder
+// fix rightmost column in picture modes
+// fix Reverse on beat strange behavior
+// correct random, remembering already loaded files in folder
 // put MMX routines directly into ::render instead of .h
 // webcam input
 // gif local palette
 // animated gif
 // transition/fading between 2 files
+// add "shuffle" radio to output blend mode on beat
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>
@@ -17,7 +19,7 @@
 #include "gif\cgif.h"
 #include "png\pngfile.h"
 
-#pragma warning( disable : 4996 )
+#pragma warning( disable : 4996 ) // deprecated warnings
 
 #define MAXMEM 1024*1024*200 // 200MB Max
 #define MAXINDEX 1024*100 // 100K bufferized frames max
@@ -1073,7 +1075,7 @@ void C_VFXAVIPLAYER::GrabAVIFrame(int frame)
 int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer, int *fbout, int w, int h)
 {
 	if(!config.enabled /*|| (!isVideoLoaded && !pJpegData )*/) return 0; // nothing to do
-	// todo: return if no file selected in combobox
+	
 	if(reload)
 	{
 		reload_image();
@@ -1141,8 +1143,8 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				if( curtime-lastchangetime>750 && isIndexable) // wait 750ms before reverse on beat works
 				{
 					config.frameskip=-config.frameskip;
-					// todo : timeout
-					SendDlgItemMessage( hwndDlg, IDC_FRAMESKIP, TBM_SETPOS, 1, config.frameskip);
+					DWORD res;
+					SendMessageTimeout(GetDlgItem(hwndDlg,IDC_FRAMESKIP),TBM_SETPOS,1,config.frameskip,SMTO_NORMAL,1000,&res);
 				}
 				wasbeat=false;
 			}
@@ -1214,13 +1216,12 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 					R=pJpegData[pixbase];
 					G=pJpegData[++pixbase];
 					B=pJpegData[++pixbase];
-					
 					if(pictureChannels==4) // alpha channel
 					{
-						frame_output = OUT_ADJUSTABLE;
-						adjustable = 255-pJpegData[++pixbase];
-						// todo: correct blending without changing frame_output value
-						//framebuffer[fbpos]=colorblend((framebuffer[fbpos]+(B|G<<8|R<<16))/2, B|G<<8|R<<16, 255-pJpegData[++pixbase]);
+						int pixel = colorblend( framebuffer[fbpos], B|G<<8|R<<16, (UINT8)(255-pJpegData[++pixbase]));
+						R = (pixel&0xff0000)>>16;
+						G = (pixel&0xff00)>>8;
+						B = pixel&0xff;
 					}
 					break;
 			
@@ -1346,7 +1347,7 @@ void C_VFXAVIPLAYER::PopulateFileList()
 	WIN32_FIND_DATA wfd;
 	HANDLE h;
 	char buf[MAX_PATH];
-	if(config.enable_videos)
+	//if(config.enable_videos)
 	{
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.avi");
@@ -1367,7 +1368,7 @@ void C_VFXAVIPLAYER::PopulateFileList()
 		}
 		FindClose(h);
 	}
-	if(config.enable_pictures)
+	//if(config.enable_pictures)
 	{
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.jpg");
@@ -1488,8 +1489,6 @@ void C_VFXAVIPLAYER::load_config(unsigned char *data, int len)
 		memset(&this->config, 0, sizeof(apeconfig));
 	}
 	PopulateFileList();
-	// todo: stop calling that from here, better to have a flag telling render it's time to reload_image
-	//reload_image();
 	reload=true;
 }
 
