@@ -27,8 +27,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,6,0
- PRODUCTVERSION 1,0,6,0
+ FILEVERSION 1,0,7,0
+ PRODUCTVERSION 1,0,7,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -43,15 +43,15 @@ BEGIN
     BEGIN
         BLOCK "080904b0"
         BEGIN
-            VALUE "Comments", "Improved AVI renderer APE for Winamp AVS"
+            VALUE "Comments", "Improved AVI and pictures renderer APE for Winamp AVS"
             VALUE "CompanyName", "Virtual Effects"
-            VALUE "FileDescription", "Improved AVI renderer APE"
-            VALUE "FileVersion", "1, 0, 6, 0"
+            VALUE "FileDescription", "Improved AVI and pictures renderer APE"
+            VALUE "FileVersion", "1, 0, 7, 0"
             VALUE "InternalName", "VFXaviPlayer"
             VALUE "LegalCopyright", "CopyLeft (C) 2004-2008 goebish"
             VALUE "OriginalFilename", "VFXaviPlayer.ape"
             VALUE "ProductName", "VFX Avi Player"
-            VALUE "ProductVersion", "1, 0, 6, 0"
+            VALUE "ProductVersion", "1, 0, 7, 0"
         END
     END
     BLOCK "VarFileInfo"
