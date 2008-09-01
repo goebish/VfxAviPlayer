@@ -25,6 +25,7 @@
 
 #define MAXMEM 1024*1024*200 // 200MB Max
 #define MAXINDEX 1024*100 // 100K bufferized frames max
+#define COLORPICKER_TIMER	1
 
 // main class
 class C_VFXAVIPLAYER : public C_RBASE 
@@ -86,7 +87,8 @@ class C_VFXAVIPLAYER : public C_RBASE
 		bool framesindex[MAXINDEX];
 		static bool isLoading;
 		e_currentMode currentMode;
-
+		UINT_PTR timerID;
+		COLORREF tempcolor; // temp color for color picker
 		static unsigned int instCount; // keep track of instanciated apes (critsec management)
 };
 
@@ -151,6 +153,40 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 {
 	switch (uMsg)
 	{
+		case WM_TIMER:
+			if( GetAsyncKeyState(VK_LBUTTON)==0) //  left mouse button released
+			{
+				// set new chroma key and kill timer;
+				KillTimer( hwndDlg, g_ConfigThis->timerID);
+				g_ConfigThis->Rd = GetRValue(g_ConfigThis->tempcolor);
+				g_ConfigThis->Gd = GetGValue(g_ConfigThis->tempcolor);
+				g_ConfigThis->Bd = GetBValue(g_ConfigThis->tempcolor);
+				int *a;
+				a=&g_ConfigThis->config.chromakey;
+				*a = g_ConfigThis->tempcolor; //((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
+				InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);
+				return 0;
+			}
+			HDC hDC;
+			hDC = CreateDC("DISPLAY",0,0,0);
+			POINT point;
+			GetCursorPos(&point);
+			g_ConfigThis->tempcolor = GetPixel(hDC,point.x,point.y);
+			DeleteDC(hDC);
+			return 0;
+
+		case WM_LBUTTONDOWN:
+		{
+			if( LOWORD(lParam)>=58 && LOWORD(lParam)<=71 &&
+				HIWORD(lParam)>=172&& HIWORD(lParam)<=186) // todo: find a better way to find coords
+			{
+				// set timer
+				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 100, NULL);
+				return 0;
+			}
+			return 0;
+		}
+
 		case WM_USER+WM_ENABLE: // custom enable/disable control, avoid calling EnableWindow from main class
 			EnableWindow( GetDlgItem(hwndDlg, LOWORD(lParam)),LOWORD(wParam)); 
 			return 1;
@@ -174,7 +210,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					g_ConfigThis->config.output_onbeat = SendMessage(h, CB_GETCURSEL, 0, 0);
 					break;
 				}
-			} else if (HIWORD(wParam) == BN_CLICKED) { // button click
+			} else if (HIWORD(wParam) == BN_CLICKED ) { // button click
 				HWND h = (HWND)lParam;
 				switch (LOWORD(wParam)) {
 				case IDC_DIRECTORY: //button [dir] select directory for avi files
@@ -447,7 +483,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			hBouton = GetDlgItem(hwndDlg, IDC_RESET);
 			hImage = LoadImage(g_ConfigThis->hInst, MAKEINTRESOURCE(IDB_RESET), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
 			SendMessage(hBouton, BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)(HANDLE)hImage);
-			
+			// todo: picker button bitmap
 			// Fill in blendmode lists
 			for (int i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
 				SendDlgItemMessage(hwndDlg, IDC_BLENDMODE, CB_ADDSTRING, 0, (LPARAM)outputs[i]);
@@ -575,6 +611,9 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				w=di->rcItem.right-di->rcItem.left;
 				color=g_ConfigThis->config.chromakey;
 				color = ((color>>16)&0xff)|(color&0xff00)|((color<<16)&0xff0000);
+				
+				color = g_ConfigThis->Rd|g_ConfigThis->Gd<<8|g_ConfigThis->Bd<<16;
+				color = g_ConfigThis->tempcolor;
 				// paint nifty color button
 				HBRUSH hBrush,hOldBrush;
 				LOGBRUSH lb={BS_SOLID,color,0};
@@ -584,6 +623,10 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				SelectObject(di->hDC,hOldBrush);
 				DeleteObject(hBrush);
 			}
+			/*else if (di->CtlID == IDC_PICKER)
+			{
+
+			}*/
 			return 0;
 		
 		case WM_DESTROY:
