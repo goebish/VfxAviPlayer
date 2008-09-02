@@ -11,7 +11,6 @@
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
 // test unicode filenames
-// index intermediate frames on frame skipping
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>

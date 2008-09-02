@@ -232,7 +232,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						Optimization="2"
-						PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_MBCS;_USRDLL;APEPICTURE2_EXPORTS;$(NoInherit)"
+						PreprocessorDefinitions="WIN32;_WINDOWS;_MBCS;_USRDLL;APEPICTURE2_EXPORTS;$(NOINHERIT)"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -241,7 +241,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						Optimization="0"
-						PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_MBCS;_USRDLL;APEPICTURE2_EXPORTS;$(NoInherit)"
+						PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_MBCS;_USRDLL;APEPICTURE2_EXPORTS;_GDEBUG_;$(NOINHERIT)"
 						BasicRuntimeChecks="3"
 						BrowseInformation="1"
 					/>
