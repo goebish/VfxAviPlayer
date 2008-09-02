@@ -859,7 +859,7 @@ void C_VFXAVIPLAYER::makeFadeBuffer()
 					fadePal[i*3+1]=palG[i];
 					fadePal[i*3+2]=palB[i];
 				}
-				memcpy( pFadeData, pJpegData + 768, pictureWidth*pictureHeight*pictureChannels);
+				memcpy( pFadeData, pJpegData + 768, pictureWidth*pictureHeight);
 			}
 			break;
 		case modeVideo:
