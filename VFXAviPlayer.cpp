@@ -155,7 +155,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 {
 	switch (uMsg)
 	{
-		case WM_TIMER:
+		case WM_TIMER: // todo: check for correct timerID (not really required as this is there is only one timer...)
 			if( GetAsyncKeyState(VK_LBUTTON)==0) //  left mouse button released
 			{
 				// set new chroma key and kill timer;
@@ -180,11 +180,9 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 
 		case WM_LBUTTONDOWN:
 		{
-			int wx = LOWORD(lParam);
-			int wy = HIWORD(lParam);
-			if( LOWORD(lParam)>=38 && LOWORD(lParam)<=71 &&
+			if( LOWORD(lParam)>=37 && LOWORD(lParam)<=70 &&
 				HIWORD(lParam)>=54&& HIWORD(lParam)<=187) // todo: find a better way to find coords
-			{
+			{	// colorpicker clicked
 				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 100, NULL);
 				return 0;
 			}
