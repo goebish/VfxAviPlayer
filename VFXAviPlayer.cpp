@@ -11,6 +11,7 @@
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
 // test unicode filenames
+// index intermediate frames on frame skipping
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>
@@ -27,6 +28,19 @@
 #define MAXMEM 1024*1024*200 // 200MB Max
 #define MAXINDEX 1024*100 // 100K bufferized frames max
 #define COLORPICKER_TIMER	1
+
+//logger for debug
+void Log(char* str)
+{
+#ifdef _GDEBUG_
+	FILE * debug = fopen( "c:\\vfxaviplayer.log","a+"); // a+ ?
+	if(debug)
+	{
+		fwrite( str, strlen(str),1,debug);
+		fclose(debug);
+	}
+#endif
+}
 
 // main class
 class C_VFXAVIPLAYER : public C_RBASE 
@@ -47,7 +61,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void OpenGif(LPCSTR szFile);
 		void OpenPng(LPCSTR szFile);
 		void OpenAVI(LPCSTR szFile);
-		void GrabAVIFrame(int frame);
+		void GrabAVIFrame(int frame, bool recurse=false);
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
 		
@@ -59,7 +73,6 @@ class C_VFXAVIPLAYER : public C_RBASE
 		long lastframe; // number of frames in current stream
 		long tpf;	// original time per frame (ms)
 		DWORD lastframetime;
-		//Gif * pGif; // Gif object
 		CGIF *pGif; // Gif object
 		char *pGifData; // pointer to 24 bits uncompressed frame buffer
 		char *pJpegData; // pointer to jpeg uncompressed frame buffer
@@ -183,7 +196,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			if( LOWORD(lParam)>=37 && LOWORD(lParam)<=70 &&
 				HIWORD(lParam)>=54&& HIWORD(lParam)<=187) // todo: find a better way to find coords
 			{	// colorpicker clicked
-				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 100, NULL);
+				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 50, NULL);
 				return 0;
 			}
 			return 0;
@@ -792,6 +805,11 @@ void C_VFXAVIPLAYER::reload_image() {
 	while(isLoading) // one loading at a time please !
 		Sleep(10);
 	EnterCriticalSection(&critsec);
+#ifdef _GDEBUG_
+	char log[255];
+	sprintf( &log[0],"Loading %s\n", config.image);
+	Log( log);  
+#endif	
 	isLoading=true;
 	char *ext = strrchr(config.image, '.') + 1;
 	char buf[MAX_PATH*2];
@@ -1056,29 +1074,56 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 ////////////////////////////////////////////
 // grab a frame from avi stream to buffer //
 ////////////////////////////////////////////
-void C_VFXAVIPLAYER::GrabAVIFrame(int frame)
+void C_VFXAVIPLAYER::GrabAVIFrame(int _frame, bool recurse)
 {
-	if(isVideoLoaded && frame<lastframe && frame>=0)
+	static int last_indexed=0;
+	if(isVideoLoaded && _frame<lastframe && _frame>=0)
 	{
 		LPBITMAPINFOHEADER lpbi=NULL;
-		if(isIndexable && framesindex[frame]) // get frame pointer from buffer
+		if(isIndexable && framesindex[_frame]) // get frame pointer from buffer
 		{
-			pData = &framesbuffer[width*height*3*frame];
+			pData = &framesbuffer[width*height*3*_frame];
 		}
 		else if(isIndexable) // try to bufferize frame
 		{	
-			lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(pgf,frame); 
+			// grab some frames in advance ! (at least upto _frame+frameskiponbeat+frameskip)
+			if(!recurse)
+				for(int i=_frame; i<_frame+10; i++)
+					if( i<lastframe && !framesindex[i])
+						GrabAVIFrame(i,true);
+			lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(pgf,_frame); 
 			if(lpbi == NULL)
 			{
 				pData=NULL;
 				return;
 			}
 			pData=(char *)lpbi+lpbi->biSize+lpbi->biClrUsed * sizeof(RGBQUAD); // pointer to uncompressed frame
-			framesindex[frame]= (memcpy_s( &framesbuffer[width*height*3*frame], width*height*3, pData, width*height*3)==0);
+			if(memcpy_s( &framesbuffer[width*height*3*_frame], width*height*3, pData, width*height*3)==0)
+			{
+				framesindex[_frame]= true;
+				if(!recurse)
+					last_indexed= _frame;
+#ifdef _GDEBUG_
+				char log[255];
+				if( _frame>0 && !framesindex[_frame-1])
+				{
+					sprintf( &log[0],"Perf Warning !\n\0");
+					Log( log);
+				}
+				sprintf( &log[0],"Indexed %d\n\0", _frame);
+				Log( log);  
+#endif
+			}
+			else
+			{
+				framesindex[_frame]= false;
+				// hmmm .. better to not insist
+				isIndexable=false;
+			}
 		}
 		else // not indexable
 		{
-			lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(pgf,frame); 
+			lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(pgf,_frame); 
 			if(lpbi == NULL)
 			{
 				pData=NULL;
@@ -1113,6 +1158,15 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 		reload_image();
 		reload=false;
 	}
+
+#ifdef _GDEBUG_
+	if(isBeat)
+	{
+		char log[255];
+		sprintf( &log[0],"Beat !\n");
+		Log( log);
+	}
+#endif
 	
 	////////////////////////////
 	// auto change management //
@@ -1192,6 +1246,11 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			if(frame<0)frame+=lastframe-1;
 			if(frame>lastframe-1)frame=frame-lastframe/*lastframe-1*/;
 			if(frame<0)frame=0;
+#ifdef _GDEBUG_
+			char log[255];
+			sprintf( &log[0],"Asking %d\n", frame);
+			Log( log);  
+#endif
 			GrabAVIFrame(frame); // grab frame to pData buffer
 			lastframetime=timeGetTime();
 		}

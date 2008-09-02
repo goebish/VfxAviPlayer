@@ -154,7 +154,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\zlib"
-				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;WIN32;_DEBUG;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS;ZLIB_WINAPI"
+				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;WIN32;_DEBUG;_WINDOWS;_USRDLL;APEPICTURE2_EXPORTS;ZLIB_WINAPI;_GDEBUG_"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
