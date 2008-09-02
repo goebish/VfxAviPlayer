@@ -7,10 +7,10 @@
 // webcam input
 // gif local palette
 // animated gif
-// color picker for color keying
-// make cursor change while picking color
+// make cursor change while picking new color for color keying
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
+// test unicode filenames
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>
@@ -155,7 +155,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 {
 	switch (uMsg)
 	{
-		case WM_TIMER: // todo: check for correct timerID (not really required as this is there is only one timer...)
+		case WM_TIMER: // todo: check for correct timerID (not really required as there is only one timer...)
 			if( GetAsyncKeyState(VK_LBUTTON)==0) //  left mouse button released
 			{
 				// set new chroma key and kill timer;
