@@ -63,6 +63,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void GrabAVIFrame(int frame, bool recurse=false);
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
+		void makeFadeBuffer();
 		
 		HINSTANCE hInst;
 		PAVISTREAM pStream;
@@ -72,11 +73,17 @@ class C_VFXAVIPLAYER : public C_RBASE
 		long lastframe; // number of frames in current stream
 		long tpf;	// original time per frame (ms)
 		DWORD lastframetime;
-		CGIF *pGif; // Gif object
+		//CGIF *pGif; // Gif object
 		char *pGifData; // pointer to 24 bits uncompressed frame buffer
 		char *pJpegData; // pointer to jpeg uncompressed frame buffer
 		char *pData; // pointer to avi uncompressed frame buffer
 		char *palData; // pointer to palette for 8 bits streams 
+		
+		char *pFadeData;
+		int	 fadeWidth, fadeHeight, fadeChannels;
+		UINT8 fadeValue;
+		byte fadePal[768]; // 3*255 for 8 bits streams
+
 		int pictureChannels; // bytes per pixels for png
 		bool isVideoLoaded;
 		bool reload;
@@ -721,8 +728,9 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	framesbuffer=NULL;
 	pData=NULL;
 	pJpegData=NULL;
-	pGif=NULL;
+	//pGif=NULL;
 	pGifData=NULL;
+	pFadeData=NULL;
 	hwndDlg=NULL;
 	currentMode=modeVideo;
 	reload=false;
@@ -750,10 +758,10 @@ C_VFXAVIPLAYER::~C_VFXAVIPLAYER()
 		free(pJpegData);
 		pJpegData = NULL;
 	}
-	if(pGif)
+	if(pFadeData)
 	{
-		delete pGif;
-		pGif=NULL;
+		delete pFadeData;
+		pFadeData=NULL;
 	}
 	if(pGifData)
 	{
@@ -794,6 +802,84 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 			EnableWindow( GetDlgItem( hwndDlg, IDC_END), FALSE);
 			break;
 	}*/
+}
+
+/////////////////////////////////////////////
+//  copy current source buffer for fading  //
+/////////////////////////////////////////////
+void C_VFXAVIPLAYER::makeFadeBuffer()
+{
+	switch( currentMode)
+	{
+		case modeJpeg:
+			if( !pJpegData)
+				return;
+			if( pFadeData==NULL)
+				pFadeData = (char*)malloc(pictureWidth*pictureHeight*3);
+			else
+				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*3);
+			if( pFadeData)
+			{
+				fadeWidth = pictureWidth;
+				fadeHeight= pictureHeight;
+				fadeChannels= 3;
+				memcpy( pFadeData, pJpegData, pictureWidth*pictureHeight*3);
+			}
+			break;
+		case modePng:
+			if( !pJpegData)
+				return;
+			if( pFadeData==NULL)
+				pFadeData = (char*)malloc(pictureWidth*pictureHeight*pictureChannels);
+			else
+				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*pictureChannels);
+			if( pFadeData)
+			{
+				fadeWidth = pictureWidth;
+				fadeHeight= pictureHeight;
+				fadeChannels= pictureChannels;
+				memcpy( pFadeData, pJpegData, pictureWidth*pictureHeight*pictureChannels);
+			}
+			break;
+		case modeGif:
+			if( !pGifData)
+				return;
+			if( pFadeData==NULL)
+				pFadeData = (char*)malloc(pictureWidth*pictureHeight + 768);
+			else
+				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight + 768);
+			if( pFadeData)
+			{
+				fadeWidth = pictureWidth;
+				fadeHeight= pictureHeight;
+				fadeChannels= 1;
+				for(int i=0; i<256; i++)
+				{
+					fadePal[i] = palR[i];
+					fadePal[i*3+1]=palG[i];
+					fadePal[i*3+2]=palB[i];
+				}
+				memcpy( pFadeData, pJpegData + 768, pictureWidth*pictureHeight*pictureChannels);
+			}
+			break;
+		case modeVideo:
+			//size_needed = width*height*3;
+			if( !pData)
+				return;
+			if( pFadeData==NULL)
+				pFadeData = (char*)malloc(pictureWidth*pictureHeight*3);
+			else
+				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*3);
+			if( pFadeData)
+			{
+				fadeWidth = width;
+				fadeHeight= height;
+				fadeChannels= 3;
+				memcpy( pFadeData, pData, width*height*3);
+			}
+			// todo: handle indexed & convert 8 to 24 bits if needed
+			break;
+	}
 }
 
 /////////////////////////////////////////
@@ -887,11 +973,6 @@ void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
 ////////////////
 void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 {
-	/*if(pGif)
-	{
-		delete pGif;
-		pGif=NULL;
-	}*/
 	if(pGifData)
 	{
 		free(pGifData);
@@ -934,7 +1015,6 @@ void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 	CGIFFF DGifCloseFile(giff); /* also frees memory structure */
 	//free(p);
 }
-
 
 ///////////////
 // open jpeg //
@@ -1019,7 +1099,6 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 	height=pInfo->bmiHeader.biHeight;
 	colordepth=pInfo->bmiHeader.biBitCount;
 	pgf=NULL;
-	
 	BITMAPINFOHEADER myFormat;
 	memset(&myFormat,0,sizeof(myFormat));
 	myFormat.biSize=40;
@@ -1046,7 +1125,6 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 			return;
 		}
 	}
-
 	// everything ok (???)
 	memset( &framesindex,0,MAXINDEX);
 	pData=NULL;
@@ -1059,7 +1137,6 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 			framesbuffer=(char*)realloc(framesbuffer,width*height*3*(1+lastframe));
 	}
 	isIndexable&= framesbuffer!=NULL;
-
 	DWORD res = 0;
 	SendMessageTimeout( hwndDlg, WM_ENABLE+WM_USER, isIndexable, IDC_REVERSE_ON_BEAT,SMTO_NORMAL,1000,&res); 
 	config.frameskip = abs(config.frameskip);
@@ -1075,7 +1152,6 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 ////////////////////////////////////////////
 void C_VFXAVIPLAYER::GrabAVIFrame(int _frame, bool recurse)
 {
-	static int last_indexed=0;
 	if(isVideoLoaded && _frame<lastframe && _frame>=0)
 	{
 		LPBITMAPINFOHEADER lpbi=NULL;
@@ -1085,9 +1161,9 @@ void C_VFXAVIPLAYER::GrabAVIFrame(int _frame, bool recurse)
 		}
 		else if(isIndexable) // try to bufferize frame
 		{	
-			// grab some frames in advance ! (at least upto _frame+frameskiponbeat+frameskip)
+			// grab some missed frames in advance ! 
 			if(!recurse)
-				for(int i=_frame; i<_frame+10; i++)
+				for(int i=_frame-10; i<_frame+1/*0*/; i++)
 					if( i<lastframe && !framesindex[i])
 						GrabAVIFrame(i,true);
 			lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(pgf,_frame); 
@@ -1097,27 +1173,29 @@ void C_VFXAVIPLAYER::GrabAVIFrame(int _frame, bool recurse)
 				return;
 			}
 			pData=(char *)lpbi+lpbi->biSize+lpbi->biClrUsed * sizeof(RGBQUAD); // pointer to uncompressed frame
-			if(memcpy_s( &framesbuffer[width*height*3*_frame], width*height*3, pData, width*height*3)==0)
+			if(!framesindex[_frame])
 			{
-				framesindex[_frame]= true;
-				if(!recurse)
-					last_indexed= _frame;
-#ifdef _GDEBUG_
-				char log[255];
-				if( _frame>0 && !framesindex[_frame-1])
+				if(memcpy_s( &framesbuffer[width*height*3*_frame], width*height*3, pData, width*height*3)==0)
 				{
-					sprintf( &log[0],"Perf Warning !\n\0");
-					Log( log);
-				}
-				sprintf( &log[0],"Indexed %d\n\0", _frame);
-				Log( log);  
+					framesindex[_frame]= true;
+#ifdef _GDEBUG_
+					char log[255];
+					if( _frame>0 && !framesindex[_frame-1])
+					{
+						// codecs hates to do that !
+						sprintf( &log[0],"Perf Warning !\n\0");
+						Log( log);
+					}
+					sprintf( &log[0],"Indexed %d\n\0", _frame);
+					Log( log);  
 #endif
-			}
-			else
-			{
-				framesindex[_frame]= false;
-				// hmmm .. better to not insist
-				isIndexable=false;
+				}
+				else
+				{
+					framesindex[_frame]= false;
+					// hmmm .. better to not insist
+					isIndexable=false;
+				}
 			}
 		}
 		else // not indexable
