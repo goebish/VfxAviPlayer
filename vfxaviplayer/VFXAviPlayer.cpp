@@ -8,6 +8,7 @@
 // gif local palette
 // animated gif
 // color picker for color keying
+// make cursor change while picking color
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
 #include <windows.h>
@@ -89,6 +90,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		e_currentMode currentMode;
 		UINT_PTR timerID;
 		COLORREF tempcolor; // temp color for color picker
+		bool pickingcolor; // we're picking a new color
 		static unsigned int instCount; // keep track of instanciated apes (critsec management)
 };
 
@@ -158,12 +160,11 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			{
 				// set new chroma key and kill timer;
 				KillTimer( hwndDlg, g_ConfigThis->timerID);
+				g_ConfigThis->pickingcolor=false;
 				g_ConfigThis->Rd = GetRValue(g_ConfigThis->tempcolor);
 				g_ConfigThis->Gd = GetGValue(g_ConfigThis->tempcolor);
 				g_ConfigThis->Bd = GetBValue(g_ConfigThis->tempcolor);
-				int *a; 
-				a=&g_ConfigThis->config.chromakey;
-				*a = g_ConfigThis->tempcolor; //((cs.rgbResult>>16)&0xff)|(cs.rgbResult&0xff00)|((cs.rgbResult<<16)&0xff0000);
+				g_ConfigThis->config.chromakey = (g_ConfigThis->Rd<<16)&0xff0000 | (g_ConfigThis->Gd<<8)&0xff00 | (g_ConfigThis->Bd&0xff);
 				InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);
 				return 0;
 			}
@@ -173,15 +174,17 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			GetCursorPos(&point);
 			g_ConfigThis->tempcolor = GetPixel(hDC,point.x,point.y);
 			DeleteDC(hDC);
+			g_ConfigThis->pickingcolor=true;
 			InvalidateRect(GetDlgItem(hwndDlg,IDC_DEFCOL),NULL,TRUE);
 			return 0;
 
 		case WM_LBUTTONDOWN:
 		{
-			if( LOWORD(lParam)>=58 && LOWORD(lParam)<=71 &&
-				HIWORD(lParam)>=172&& HIWORD(lParam)<=186) // todo: find a better way to find coords
+			int wx = LOWORD(lParam);
+			int wy = HIWORD(lParam);
+			if( LOWORD(lParam)>=38 && LOWORD(lParam)<=71 &&
+				HIWORD(lParam)>=54&& HIWORD(lParam)<=187) // todo: find a better way to find coords
 			{
-				// set timer
 				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 100, NULL);
 				return 0;
 			}
@@ -485,11 +488,6 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			hImage = LoadImage(g_ConfigThis->hInst, MAKEINTRESOURCE(IDB_RESET), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
 			SendMessage(hBouton, BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)(HANDLE)hImage);
 			// todo: free hImage ?
-			// todo: picker button bitmap
-			
-			hBouton = GetDlgItem(hwndDlg, IDC_PICKER);
-			hImage = LoadImage(g_ConfigThis->hInst, MAKEINTRESOURCE(IDB_PICKER), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-			SendMessage(hBouton, BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)(HANDLE)hImage);
 			
 			// Fill in blendmode lists
 			for (int i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
@@ -616,13 +614,13 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				int w;
 				int color;
 				w=di->rcItem.right-di->rcItem.left;
-				//color=g_ConfigThis->config.chromakey;
-				//color = ((color>>16)&0xff)|(color&0xff00)|((color<<16)&0xff0000);
-				
-				color = g_ConfigThis->Rd|g_ConfigThis->Gd<<8|g_ConfigThis->Bd<<16;
-				if(g_ConfigThis->tempcolor)
+				if(g_ConfigThis->pickingcolor)
 					color = g_ConfigThis->tempcolor;
-				//color = g_ConfigThis->tempcolor;
+				else
+				{
+					color=g_ConfigThis->config.chromakey;
+					color = ((color>>16)&0xff)|(color&0xff00)|((color<<16)&0xff0000);
+				}
 				// paint nifty color button
 				HBRUSH hBrush,hOldBrush;
 				LOGBRUSH lb={BS_SOLID,color,0};
@@ -718,6 +716,8 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	hwndDlg=NULL;
 	currentMode=modeVideo;
 	reload=false;
+	pickingcolor=false;
+	tempcolor=0;
 }
 
 
