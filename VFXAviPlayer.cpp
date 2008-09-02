@@ -63,7 +63,8 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void GrabAVIFrame(int frame, bool recurse=false);
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
-		void makeFadeBuffer();
+		void initFadeBuffer();
+		char* makeFadeBuffer();
 		
 		HINSTANCE hInst;
 		PAVISTREAM pStream;
@@ -804,10 +805,22 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 	}*/
 }
 
+//////////////////////////////////////////////////////
+//  blend current source buffer with fading buffer  //
+//////////////////////////////////////////////////////
+char* C_VFXAVIPLAYER::makeFadeBuffer()
+{
+	// maybe not a good idea to return a new buffer .... directly blend into current source buffer ?
+	int Rs=0,Gs=0,Bs=0,R=0,G=0,B=0;
+
+	// todo: blend (fadeValue) to current sourcesize
+	return NULL;
+}
+
 /////////////////////////////////////////////
 //  copy current source buffer for fading  //
 /////////////////////////////////////////////
-void C_VFXAVIPLAYER::makeFadeBuffer()
+void C_VFXAVIPLAYER::initFadeBuffer()
 {
 	switch( currentMode)
 	{
@@ -863,7 +876,6 @@ void C_VFXAVIPLAYER::makeFadeBuffer()
 			}
 			break;
 		case modeVideo:
-			//size_needed = width*height*3;
 			if( !pData)
 				return;
 			if( pFadeData==NULL)
