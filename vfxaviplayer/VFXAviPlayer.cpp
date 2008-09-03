@@ -11,6 +11,9 @@
 // transition/fading between 2 files
 // add "shuffle" radio to output blend mode on beat
 // test unicode filenames
+
+//#define FADING
+
 #include <windows.h>
 #include <commctrl.h>
 #include <vfw.h>
@@ -63,8 +66,8 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void GrabAVIFrame(int frame, bool recurse=false);
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
-		void initFadeBuffer();
-		char* makeFadeBuffer();
+		void initFadeBuffer(int *framebuffer,int w,int h);
+		void makeFadeBuffer(int w,int h);
 		
 		HINSTANCE hInst;
 		PAVISTREAM pStream;
@@ -80,9 +83,10 @@ class C_VFXAVIPLAYER : public C_RBASE
 		char *pData; // pointer to avi uncompressed frame buffer
 		char *palData; // pointer to palette for 8 bits streams 
 		
-		char *pFadeData;
+		int *pFadeData; // initial fading buffer
+		char *pCurrentFadeData;
 		int	 fadeWidth, fadeHeight, fadeChannels;
-		UINT8 fadeValue;
+		/*UINT8*/ int fadeValue;
 		byte fadePal[768]; // 3*255 for 8 bits streams
 
 		int pictureChannels; // bytes per pixels for png
@@ -732,11 +736,13 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	//pGif=NULL;
 	pGifData=NULL;
 	pFadeData=NULL;
+	pCurrentFadeData=NULL;
 	hwndDlg=NULL;
 	currentMode=modeVideo;
 	reload=false;
 	pickingcolor=false;
 	tempcolor=0;
+	fadeValue=0;
 }
 
 
@@ -808,90 +814,44 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 //////////////////////////////////////////////////////
 //  blend current source buffer with fading buffer  //
 //////////////////////////////////////////////////////
-char* C_VFXAVIPLAYER::makeFadeBuffer()
+void C_VFXAVIPLAYER::makeFadeBuffer(int w, int h)
 {
-	
-	int Rs=0,Gs=0,Bs=0,R=0,G=0,B=0;
-
-	// todo: blend (fadeValue) to current sourcesize
-	return NULL;
+	UINT8 Rs=0,Gs=0,Bs=0,R=0,G=0,B=0;
+	if(!pCurrentFadeData)
+		pCurrentFadeData = (char*)malloc(w*h*3);
+	else
+		pCurrentFadeData = (char*)realloc(pCurrentFadeData, w*h*3);
+	if(pCurrentFadeData && pFadeData)
+	{ // fade at current screen size
+		
+		// find rgb in fade buffer
+		int sourcesize=0;
+		for(int y=0;y<h;y++)
+		{
+			//for(int x=w-1;x>-1
+		}
+	}
 }
 
 /////////////////////////////////////////////
 //  copy current source buffer for fading  //
 /////////////////////////////////////////////
-void C_VFXAVIPLAYER::initFadeBuffer()
+void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 {
-	switch( currentMode)
+#ifdef FADING
+	if(!pFadeData)
+		pFadeData = (int*)malloc(w*h*sizeof(int));
+	else
+		pFadeData = (int*)realloc(pFadeData,w*h*sizeof(int));
+	if(pFadeData)
 	{
-		case modeJpeg:
-			if( !pJpegData)
-				return;
-			if( pFadeData==NULL)
-				pFadeData = (char*)malloc(pictureWidth*pictureHeight*3);
-			else
-				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*3);
-			if( pFadeData)
-			{
-				fadeWidth = pictureWidth;
-				fadeHeight= pictureHeight;
-				fadeChannels= 3;
-				memcpy( pFadeData, pJpegData, pictureWidth*pictureHeight*3);
-			}
-			break;
-		case modePng:
-			if( !pJpegData)
-				return;
-			if( pFadeData==NULL)
-				pFadeData = (char*)malloc(pictureWidth*pictureHeight*pictureChannels);
-			else
-				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*pictureChannels);
-			if( pFadeData)
-			{
-				fadeWidth = pictureWidth;
-				fadeHeight= pictureHeight;
-				fadeChannels= pictureChannels;
-				memcpy( pFadeData, pJpegData, pictureWidth*pictureHeight*pictureChannels);
-			}
-			break;
-		case modeGif:
-			if( !pGifData)
-				return;
-			if( pFadeData==NULL)
-				pFadeData = (char*)malloc(pictureWidth*pictureHeight + 768);
-			else
-				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight + 768);
-			if( pFadeData)
-			{
-				fadeWidth = pictureWidth;
-				fadeHeight= pictureHeight;
-				fadeChannels= 1;
-				for(int i=0; i<256; i++)
-				{
-					fadePal[i] = palR[i];
-					fadePal[i*3+1]=palG[i];
-					fadePal[i*3+2]=palB[i];
-				}
-				memcpy( pFadeData, pJpegData + 768, pictureWidth*pictureHeight);
-			}
-			break;
-		case modeVideo:
-			if( !pData)
-				return;
-			if( pFadeData==NULL)
-				pFadeData = (char*)malloc(pictureWidth*pictureHeight*3);
-			else
-				pFadeData = (char*)realloc(pFadeData, pictureWidth*pictureHeight*3);
-			if( pFadeData)
-			{
-				fadeWidth = width;
-				fadeHeight= height;
-				fadeChannels= 3;
-				memcpy( pFadeData, pData, width*height*3);
-			}
-			// todo: handle indexed & convert 8 to 24 bits if needed
-			break;
+		memcpy( pFadeData, framebuffer, w*h*sizeof(int));
+		fadeWidth=w;
+		fadeHeight=h;
+		fadeChannels=3;
+		fadeValue=255; // start fading
 	}
+#endif
 }
 
 /////////////////////////////////////////
@@ -1244,6 +1204,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	
 	if(reload)
 	{
+#ifdef FADING
+		initFadeBuffer(framebuffer,w,h);
+#endif
 		reload_image();
 		reload=false;
 	}
@@ -1288,6 +1251,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			DWORD res;
 			SendMessageTimeout(GetDlgItem(hwndDlg,IDC_PICTURE),CB_SETCURSEL,curfile,0,SMTO_NORMAL,1000,&res); // fix [x2] problem !!!!!!!
 			strcpy(config.image,filelist[curfile]);
+#ifdef FADING
+			initFadeBuffer(framebuffer,w,h);
+#endif
 			reload_image(); 
 			lastframetime=timeGetTime();
 		}	
@@ -1491,11 +1457,21 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 						break;
 				}
 			}
+#ifdef FADING
+			if( fadeValue>0)
+			{
+				if(pFadeData)
+					framebuffer[fbpos]=colorblend(framebuffer[fbpos],pFadeData[fbpos], 255-fadeValue);
+			}
+#endif
 		}
 	}
 	_asm
 		emms;
-	
+#ifdef FADING
+	if(fadeValue>0)
+		fadeValue-=10;
+#endif
 	return 0;
 }
 
