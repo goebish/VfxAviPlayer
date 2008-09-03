@@ -179,11 +179,29 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 {
 	switch (uMsg)
 	{
+		/*case WM_SETCURSOR:
+			HCURSOR cursor;
+			if(g_ConfigThis->pickingcolor)
+			{
+				cursor = LoadCursor( NULL, IDC_CROSS);
+				SetCursor( cursor);
+			}
+			else
+			{
+				cursor = LoadCursor( NULL, IDC_ARROW);
+				SetCursor( cursor);
+			}
+			return 0;*/
+
 		case WM_TIMER: // todo: check for correct timerID (not really required as there is only one timer...)
 			if( GetAsyncKeyState(VK_LBUTTON)==0) //  left mouse button released
 			{
 				// set new chroma key and kill timer;
 				KillTimer( hwndDlg, g_ConfigThis->timerID);
+				
+				/*HCURSOR cursor = LoadCursor( NULL, IDC_ARROW);
+				SetCursor( cursor);*/
+				
 				g_ConfigThis->pickingcolor=false;
 				g_ConfigThis->Rd = GetRValue(g_ConfigThis->tempcolor);
 				g_ConfigThis->Gd = GetGValue(g_ConfigThis->tempcolor);
@@ -207,6 +225,8 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			if( LOWORD(lParam)>=37 && LOWORD(lParam)<=70 &&
 				HIWORD(lParam)>=54&& HIWORD(lParam)<=187) // todo: find a better way to find coords
 			{	// colorpicker clicked
+				/*HCURSOR cursor = LoadCursor( NULL, IDC_CROSS);
+				SetCursor( cursor);*/
 				g_ConfigThis->timerID = SetTimer(hwndDlg, COLORPICKER_TIMER, 50, NULL);
 				return 0;
 			}
@@ -1419,7 +1439,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				drawThisPixel = !(r*r+g*g+b*b < l);
 				if(config.invchroma) drawThisPixel=!drawThisPixel;
 			}
-	
+			// todo : init Fade buffer from here
 			// draw pixel
 			if(drawThisPixel) {
 				switch (frame_output) {
