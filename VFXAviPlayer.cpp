@@ -810,7 +810,7 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 //////////////////////////////////////////////////////
 char* C_VFXAVIPLAYER::makeFadeBuffer()
 {
-	// maybe not a good idea to return a new buffer .... directly blend into current source buffer ?
+	
 	int Rs=0,Gs=0,Bs=0,R=0,G=0,B=0;
 
 	// todo: blend (fadeValue) to current sourcesize
