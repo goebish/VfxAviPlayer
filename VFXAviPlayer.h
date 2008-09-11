@@ -75,6 +75,7 @@ struct apeconfig { // vars config (loaded/saved)
 	// v1.07-
 	int enable_videos;
 	int enable_pictures;
+	int enable_transition;
 };
 
 #define OUT_REPLACE       0

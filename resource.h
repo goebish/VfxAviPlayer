@@ -74,6 +74,9 @@
 #define IDC_PICTURES                    1067
 #define IDC_GROUP_SPEED                 1068
 #define IDC_PICKER                      1069
+#define IDC_TIMELINE                    1071
+#define IDC_CHECK2                      1072
+#define IDC_FADE                        1072
 
 // Next default values for new objects
 // 
@@ -81,7 +84,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        110
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1070
+#define _APS_NEXT_CONTROL_VALUE         1073
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
