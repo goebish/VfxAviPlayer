@@ -6,7 +6,7 @@
 //
 // TODO
 //
-// bilinear filtering
+// bilinear filtering (+ Duplicate first and last row and column to optimize the bilinear algo, so it doesn't crash when it blends with pixels outside the image)
 // try to keep 20 frames for fading in video mode
 // fix leftmost column in picture modes
 // fix Reverse on beat strange behavior (fixed???)
@@ -72,6 +72,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void OpenGif(LPCSTR szFile);
 		void OpenPng(LPCSTR szFile);
 		void OpenAVI(LPCSTR szFile);
+		void OpenBmp(LPCSTR szFile);
 		void GrabAVIFrame(int frame, bool recurse=false);
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
@@ -86,16 +87,15 @@ class C_VFXAVIPLAYER : public C_RBASE
 		long lastframe; // number of frames in current stream
 		long tpf;	// original time per frame (ms)
 		DWORD lastframetime;
-		//CGIF *pGif; // Gif object
 		char *pGifData; // pointer to 24 bits uncompressed frame buffer
-		char *pJpegData; // pointer to jpeg uncompressed frame buffer
+		char *pJpegData; // pointer to jpeg,png or bmp uncompressed frame buffer
 		char *pData; // pointer to avi uncompressed frame buffer
 		char *palData; // pointer to palette for 8 bits streams 
 		
 		int *pFadeData; // initial fading buffer
 		char *pCurrentFadeData;
 		int	 fadeWidth, fadeHeight, fadeChannels;
-		/*UINT8*/ int fadeValue;
+		int fadeValue;
 		byte fadePal[768]; // 3*255 for 8 bits streams
 
 		int pictureChannels; // bytes per pixels for png
@@ -890,6 +890,7 @@ void C_VFXAVIPLAYER::makeFadeBuffer(int w, int h)
 /////////////////////////////////////////////
 void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 {
+	// todo: buffer for bmp mode
 	if(currentMode==modeVideo && pData==NULL)
 		return;
 	if(currentMode==modeJpeg && pJpegData==NULL)
@@ -919,6 +920,9 @@ void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 			case modeGif:
 				sourcesize=pictureWidth*pictureHeight-1;
 				break;
+			case modeBmp:
+				sourcesize=pictureWidth*pictureHeight*4-4; 
+				break;
 		}
 		for(int y=0;y<h;y++) {
 			for(int x=w-1;x>-1;x--) {
@@ -946,6 +950,13 @@ void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 						R=pJpegData[pixbase];
 						G=pJpegData[++pixbase];
 						B=pJpegData[++pixbase];
+						break;
+						
+					case modeBmp:
+						pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*4);
+						B=pJpegData[pixbase];
+						G=pJpegData[++pixbase];
+						R=pJpegData[++pixbase];
 						break;
 
 					case modeGif:
@@ -1020,10 +1031,58 @@ void C_VFXAVIPLAYER::reload_image() {
 		OpenPng(buf);
 		currentMode = modePng;
 	}
+	else if( (stricmp(ext, "bmp")==0 && GetFileAttributes(buf)!=INVALID_FILE_ATTRIBUTES))
+	{
+		OpenBmp(buf);
+		currentMode = modeBmp;
+	}
 	setGUI(currentMode);
 	lastchangetime=timeGetTime();
 	LeaveCriticalSection(&critsec);
 	isLoading=false;
+}
+
+////////////////
+//  open bmp  //
+////////////////
+void C_VFXAVIPLAYER::OpenBmp(LPCSTR szFile)
+{
+	HBITMAP bmp = (HBITMAP)LoadImage(0, szFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE|LR_CREATEDIBSECTION);
+	if(!bmp) // load failed
+	{
+		if(pJpegData)
+			free(pJpegData);
+		return;
+	}
+	DIBSECTION dib;
+	GetObject(bmp, sizeof(dib), &dib);
+	pictureWidth = dib.dsBmih.biWidth;
+	pictureHeight = dib.dsBmih.biHeight;
+	if(!pJpegData)
+		pJpegData = (char*)malloc(pictureWidth*pictureHeight*4);
+	else
+		pJpegData = (char*)realloc(pJpegData, pictureWidth*pictureHeight*4);
+	if(pJpegData)
+	{
+		BITMAPINFO bi;
+		HDC bmpdc = CreateCompatibleDC(NULL);
+		HBITMAP bmpold = (HBITMAP)SelectObject(bmpdc, bmp);
+		bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		bi.bmiHeader.biWidth = pictureWidth;
+		bi.bmiHeader.biHeight = -pictureHeight;
+		bi.bmiHeader.biPlanes = 1;
+		bi.bmiHeader.biBitCount = 32;
+		bi.bmiHeader.biCompression = BI_RGB;
+		bi.bmiHeader.biSizeImage = pictureWidth*pictureHeight*4;
+		bi.bmiHeader.biXPelsPerMeter = 0;
+		bi.bmiHeader.biYPelsPerMeter = 0;
+		bi.bmiHeader.biClrUsed = 16777215;
+		bi.bmiHeader.biClrImportant = 16777215;
+		GetDIBits(bmpdc, bmp, 0, pictureHeight, pJpegData, &bi, DIB_RGB_COLORS);
+		SelectObject(bmpdc, bmpold);
+		DeleteDC(bmpdc);
+	}
+	DeleteObject(bmp);
 }
 
 ////////////////
@@ -1376,7 +1435,13 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 					curfile=totfiles-1;}
 			}
 			else { // random
-				curfile=(timeGetTime())%totfiles; 
+				static bool rnd_init=false;
+				if(!rnd_init) // init random seed, doesn't work from constructor ... (?)
+				{
+					srand(GetTickCount());
+					rnd_init=true;
+				}
+				curfile = rand()%totfiles;
 			}
 			strcpy(config.image,filelist[curfile]);
 			DWORD res;
@@ -1469,6 +1534,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 	if(currentMode==modePng && pJpegData==NULL)
 		return 0;
 
+	if(currentMode==modeBmp && pJpegData==NULL)
+		return 0;
+
 	int pixbase=0; 
 	UINT8 R=0,G=0,B=0;
 	UINT8 adjustable=(config.blend_value-2)*5;
@@ -1494,6 +1562,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			break;
 		case modeGif:
 			sourcesize=pictureWidth*pictureHeight-1;
+			break;
+		case modeBmp:
+			sourcesize=pictureWidth*pictureHeight*4-4; 
 			break;
 	}
 	
@@ -1524,6 +1595,13 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 					R=pJpegData[pixbase];
 					G=pJpegData[++pixbase];
 					B=pJpegData[++pixbase];
+					break;
+
+				case modeBmp:
+					pixbase= sourcesize-(((w-x)*pictureWidth/w+y*pictureHeight/h*pictureWidth)*4);
+					B=pJpegData[pixbase];
+					G=pJpegData[++pixbase];
+					R=pJpegData[++pixbase];
 					break;
 
 				case modeGif:
@@ -1725,6 +1803,24 @@ void C_VFXAVIPLAYER::PopulateFileList()
 		FindClose(h);
 		strcpy(buf,config.avipath);
 		strcat(buf,"\\*.png");
+		h = FindFirstFile(buf, &wfd);
+		if (h != INVALID_HANDLE_VALUE) 
+		{
+			bool rep = true;
+			while (rep) 
+			{
+				totfiles++;
+				strcpy(filename[totfiles-1],wfd.cFileName);
+				filelist[totfiles-1]=filename[totfiles-1];
+				if (!FindNextFile(h, &wfd)) 
+				{
+					rep = false;
+				}
+			};
+		}
+		FindClose(h);
+		strcpy(buf,config.avipath);
+		strcat(buf,"\\*.bmp");
 		h = FindFirstFile(buf, &wfd);
 		if (h != INVALID_HANDLE_VALUE) 
 		{

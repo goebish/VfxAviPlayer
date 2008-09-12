@@ -95,7 +95,8 @@ enum e_currentMode{
 	modeVideo,
 	modeJpeg,
 	modeGif,
-	modePng
+	modePng,
+	modeBmp
 };
 
 static char *outputs[] = { "Replace", "Additive", "Maximum", "Minimum", "50/50", "Subtractive1", "Subtractive2", "Multiply", "Xor", "Adjustable", "Ignore","Default renderer" };
