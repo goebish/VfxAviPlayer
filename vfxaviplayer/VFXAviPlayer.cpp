@@ -3,12 +3,14 @@
 // transition/fading between 2 files (ok, need some testing and keying management)
 // make cursor change while picking new color for color keying (global hook on WM_SETCURSOR), really usefull ?
 // timeline for easy scratch (ok but perf slowdown because of gui :/ )
+// fading by time (not -10 every frame)
 //
 // TODO
 //
-// bilinear filtering (+ Duplicate first and last row and column to optimize the bilinear algo, so it doesn't crash when it blends with pixels outside the image)
-// try to keep 20 frames for fading in video mode
-// fix leftmost column in picture modes
+// slider for fade speed
+// bilinear filtering, at least for pictures (see picture2.cpp for algo)
+// try to keep enough frames for fading time in video mode
+// fix leftmost column in picture modes (maybe a rounding error from bad (fastest) option in vcproj ?)
 // fix Reverse on beat strange behavior (fixed???)
 // no more need for critsec ?
 // correct random, remembering already loaded files in folder
@@ -22,6 +24,7 @@
 // no more speed+frameskip sliders but only 1 automatic slider (x.25,x.5,x1,x1.25, ..., x5 ??)
 
 //#define PICKER_CURSOR
+//#define TIMELINE
 
 #include <windows.h>
 #include <commctrl.h>
@@ -87,6 +90,7 @@ class C_VFXAVIPLAYER : public C_RBASE
 		long lastframe; // number of frames in current stream
 		long tpf;	// original time per frame (ms)
 		DWORD lastframetime;
+		DWORD fadeStartTime;
 		char *pGifData; // pointer to 24 bits uncompressed frame buffer
 		char *pJpegData; // pointer to jpeg,png or bmp uncompressed frame buffer
 		char *pData; // pointer to avi uncompressed frame buffer
@@ -528,6 +532,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					return 1;
 				}
 
+#ifdef TIMELINE
 				// timeline
 				case IDC_TIMELINE:
 				{
@@ -535,7 +540,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 					g_ConfigThis->changeFrame=true;
 					return 1;
 				}
-
+#endif
 
 				//default:
 				//return 1;
@@ -651,7 +656,11 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			SendDlgItemMessage(hwndDlg, IDC_WHITE, TBM_SETPOS, 1, g_ConfigThis->config.white);
 			SendDlgItemMessage(hwndDlg, IDC_BEAT_PERSISTANCE, TBM_SETRANGE, 1, MAKELONG(2,53)); // init slider beat persistance 
 			SendDlgItemMessage(hwndDlg, IDC_BEAT_PERSISTANCE, TBM_SETPOS, 1, g_ConfigThis->config.beatpersistance);
-			SendDlgItemMessage(hwndDlg, IDC_SPEED, TBM_SETRANGE, 1, MAKELONG(-200,110)); // init slider speed
+#ifndef TIMELINE
+			EnableWindow( GetDlgItem( hwndDlg, IDC_TIMELINE), FALSE);
+			SetWindowPos(  GetDlgItem( hwndDlg, IDC_TIMELINE), HWND_BOTTOM, -10, 0, 0, 0, SWP_HIDEWINDOW);
+#endif
+			SendDlgItemMessage(hwndDlg, IDC_SPEED, TBM_SETRANGE, 1, MAKELONG(-200,110)); // init slider speed (+200/-110 ms/frame)
 			SendDlgItemMessage(hwndDlg, IDC_SPEED, TBM_SETPOS, 1, g_ConfigThis->config.speed);
 			SendDlgItemMessage(hwndDlg, IDC_FRAMESKIP, TBM_SETRANGE, 1, MAKELONG(-9/*1*/,9)); // init slider frameskip
 			SendDlgItemMessage(hwndDlg, IDC_FRAMESKIP, TBM_SETPOS, 1, g_ConfigThis->config.frameskip);
@@ -795,6 +804,7 @@ C_VFXAVIPLAYER::C_VFXAVIPLAYER()
 	pickingcolor=false;
 	tempcolor=0;
 	fadeValue=0;
+	fadeStartTime=0;
 }
 
 
@@ -890,7 +900,6 @@ void C_VFXAVIPLAYER::makeFadeBuffer(int w, int h)
 /////////////////////////////////////////////
 void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 {
-	// todo: buffer for bmp mode
 	if(currentMode==modeVideo && pData==NULL)
 		return;
 	if(currentMode==modeJpeg && pJpegData==NULL)
@@ -898,6 +907,8 @@ void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 	if(currentMode==modeGif && pGifData==NULL)
 		return;
 	if(currentMode==modePng && pJpegData==NULL)
+		return;
+	if(currentMode==modeBmp && pJpegData==NULL)
 		return;
 	if(!pFadeData)
 		pFadeData = (int*)malloc(w*h*sizeof(int));
@@ -988,7 +999,8 @@ void C_VFXAVIPLAYER::initFadeBuffer(int *framebuffer,int w,int h)
 		}
 		fadeWidth=w;
 		fadeHeight=h;
-		fadeValue=200; // start fading
+		fadeStartTime=GetTickCount();
+		fadeValue=250; // start fading
 	}
 }
 
@@ -1095,42 +1107,45 @@ void C_VFXAVIPLAYER::OpenPng(LPCSTR szFile)
     int                cImgChannels;
     png_color          bkgColor = {127, 127, 127};
 
-	if(pJpegData)
-	{
-		free(pJpegData);
-		pJpegData=NULL;
-	}
-	
 	if(PngLoadImage ((char*)szFile, &pbImage, &cxImgSize, &cyImgSize, &cImgChannels, &bkgColor))
 	{
 		pictureWidth = cxImgSize;
 		pictureHeight= cyImgSize;
 		pictureChannels=cImgChannels;
-		pJpegData = (char*)malloc( pictureHeight*pictureWidth*cImgChannels);
-		memcpy( pJpegData, pbImage, pictureHeight*pictureWidth*cImgChannels);
-		
-		png_byte **ppbImage = &pbImage;
-		
-		if (*ppbImage)
+		if(!pJpegData)
+			pJpegData = (char*)malloc( pictureHeight*pictureWidth*cImgChannels);
+		else
+			pJpegData = (char*)realloc( pJpegData, pictureHeight*pictureWidth*cImgChannels);
+		if(pJpegData)
 		{
-			free (*ppbImage); // grr reste une fuite de mémoire dans PngLoadImage (8ko/image?, pas tt le temps, résolu ???)
-			*ppbImage = NULL;
+			memcpy( pJpegData, pbImage, pictureHeight*pictureWidth*cImgChannels);			
+			png_byte **ppbImage = &pbImage;			
+			if (*ppbImage)
+			{
+				free (*ppbImage); // grr reste une fuite de mémoire dans PngLoadImage (8ko/image?, pas tt le temps, résolu ???)
+				*ppbImage = NULL;
+			}
+			if( pbImage)
+			{
+				free(pbImage);
+				pbImage=NULL;
+			}
 		}
-		if( pbImage)
-		{
-			free(pbImage);
-			pbImage=NULL;
-		}
+	}
+	else if(pJpegData)
+	{		
+		free(pJpegData);
+		pJpegData=NULL;
 	}
 	colordepth=24; 
 }
 
-#define CGIFFF CGIF::
 ////////////////
 //  open gif  //
 ////////////////
 void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 {
+	#define CGIFFF CGIF::
 	if(pGifData)
 	{
 		free(pGifData);
@@ -1162,16 +1177,11 @@ void C_VFXAVIPLAYER::OpenGif(LPCSTR szFile)
 		palG[palNum]=co->Green;
 		palB[palNum]=co->Blue;
 		palNum++;
-		/**p++=(char)co->Red; 
-		*p++=(char)co->Green; 
-		*p++=(char)co->Blue; 
-		co++; */
 		co++;
 	}
 	// if (sp->transp!=-1) img->setTransp(sp->transp); // todo : transparency color index
 	memcpy(pGifData, sp->RasterBits, sp->ImageDesc.Width*sp->ImageDesc.Height);
 	CGIFFF DGifCloseFile(giff); /* also frees memory structure */
-	//free(p);
 }
 
 ///////////////
@@ -1301,11 +1311,12 @@ void C_VFXAVIPLAYER::OpenAVI(LPCSTR szFile)
 	SendMessageTimeout( GetDlgItem( hwndDlg, IDC_FRAMESKIP), TBM_SETPOS, 1, config.frameskip, SMTO_NORMAL,300,&res); 
 	SendMessageTimeout( GetDlgItem( hwndDlg, IDC_FRAMESKIP), TBM_SETRANGE, 1, MAKELONG(isIndexable?-9:0,9),SMTO_NORMAL,300,&res);  
 	
+#ifdef TIMELINE
 	//timeline
 	SendMessageTimeout( GetDlgItem( hwndDlg, IDC_TIMELINE), TBM_SETRANGE, 1, MAKELONG(0, lastframe-1), SMTO_NORMAL, 300, &res);
 	SendMessageTimeout( GetDlgItem( hwndDlg, IDC_TIMELINE), TBM_SETPOS, 1, 0, SMTO_NORMAL, 300, &res);
+#endif
 
-	//SendDlgItemMessage(hwndDlg, IDC_FRAMESKIP, TBM_SETRANGE, 1, MAKELONG(isIndexable?-9:0,9));
 	isVideoLoaded=true;
 	frame=-1;
 	loopcount=0;
@@ -1501,7 +1512,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			
 			if(frame<0)frame+=lastframe-1;
 			if(frame>lastframe-1)frame=frame-lastframe/*lastframe-1*/;
-			if(frame<0)frame=0;
+			if(frame<0)frame=0; // can this be the reason of bad reverse on beat behavior ?
 #ifdef _GDEBUG_
 			char log[255];
 			sprintf( &log[0],"Asking %d\n", frame);
@@ -1510,6 +1521,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 			GrabAVIFrame(frame); // grab frame to pData buffer
 			DWORD res=0;
 			
+#ifdef TIMELINE
 			// don't send timeline pos at each new frame, or it eats up cpu (still too much with each percent !!!)
 			static int current_timeline_percent=0;
 			int new_timeline_percent = frame*100/lastframe;
@@ -1518,6 +1530,7 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				SendMessageTimeout( GetDlgItem( hwndDlg, IDC_TIMELINE), TBM_SETPOS, 1, frame, SMTO_NORMAL, 100, &res);
 				current_timeline_percent=new_timeline_percent;
 			}
+#endif
 			lastframetime=timeGetTime();
 		}
 	}
@@ -1629,6 +1642,15 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 					break;
 			}
 			
+			// calculate fading
+			if( fadeValue>0 && pFadeData)
+			{
+				int pixel =  colorblend(  B|G<<8|R<<16 , pFadeData[fbpos], 255-fadeValue);
+				R = (pixel&0xff0000)>>16;
+				G = (pixel&0xff00)>>8;
+				B = pixel&0xff;
+			}
+
 			if(config.lumablack ) {// luma on black
 				L=(R+G+B)/3; // calcul luminance simple moyenne
 				drawThisPixel= L>=config.black;
@@ -1681,17 +1703,15 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 						break;
 				}
 			}
-			if( fadeValue>0)
-			{
-				if(pFadeData)
-					framebuffer[fbpos]=colorblend(framebuffer[fbpos],pFadeData[fbpos], 255-fadeValue);
-			}
 		}
 	}
 	_asm
 		emms;
 	if(fadeValue>0)
-		fadeValue-=10;
+	{
+		// fade -10 every 1/24 sec .... todo: make it works with a slider
+		fadeValue=250 - ( ((GetTickCount()-fadeStartTime)/(1000/24))*10);
+	}
 	return 0;
 }
 
