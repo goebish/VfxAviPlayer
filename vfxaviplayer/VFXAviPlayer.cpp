@@ -1,13 +1,12 @@
 // In Progress
 //
-// transition/fading between 2 files (ok, need some testing and keying management)
+// transition/fading between 2 files (ok, need slider for fading speed)
 // make cursor change while picking new color for color keying (global hook on WM_SETCURSOR), really usefull ?
 // timeline for easy scratch (ok but perf slowdown because of gui :/ )
 // fading by time (not -10 every frame)
 //
 // TODO
 //
-// slider for fade speed
 // bilinear filtering, at least for pictures (see picture2.cpp for algo)
 // try to keep enough frames for fading time in video mode
 // fix leftmost column in picture modes (maybe a rounding error from bad (fastest) option in vcproj ?)
