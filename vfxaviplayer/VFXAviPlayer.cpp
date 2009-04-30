@@ -828,8 +828,13 @@ C_VFXAVIPLAYER::~C_VFXAVIPLAYER()
 	}
 	if(pFadeData)
 	{
-		delete pFadeData;
+		free(pFadeData);
 		pFadeData=NULL;
+	}
+	if(pCurrentFadeData)
+	{
+		free(pCurrentFadeData);
+		pCurrentFadeData=NULL;
 	}
 	if(pGifData)
 	{
@@ -1062,7 +1067,10 @@ void C_VFXAVIPLAYER::OpenBmp(LPCSTR szFile)
 	if(!bmp) // load failed
 	{
 		if(pJpegData)
+		{
 			free(pJpegData);
+			pJpegData=NULL;
+		}
 		return;
 	}
 	DIBSECTION dib;
