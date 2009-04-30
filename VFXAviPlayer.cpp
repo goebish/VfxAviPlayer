@@ -256,7 +256,7 @@ static BOOL CALLBACK g_DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 		case WM_COMMAND:
 			if (HIWORD(wParam) == CBN_SELCHANGE) { // combo change
 				HWND h = (HWND)lParam;
-				int p;
+				int p=0;
 				switch (LOWORD(wParam)) {
 				case IDC_PICTURE: // new avi file selected
 					p = SendMessage(h, CB_GETCURSEL, 0, 0);
@@ -1713,7 +1713,9 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 		}
 	}
 	_asm
+	{
 		emms;
+	}
 	if(fadeValue>0)
 	{
 		// fade -10 every 1/24 sec .... todo: make it works with a slider
