@@ -79,7 +79,6 @@ class C_VFXAVIPLAYER : public C_RBASE
 		void PopulateFileList();
 		void setGUI(e_currentMode mode);
 		void initFadeBuffer(int *framebuffer,int w,int h);
-		void makeFadeBuffer(int w,int h);
 		
 		HINSTANCE hInst;
 		PAVISTREAM pStream;
@@ -877,28 +876,6 @@ void C_VFXAVIPLAYER::setGUI(e_currentMode mode)
 	}*/
 }
 
-//////////////////////////////////////////////////////
-//  blend current source buffer with fading buffer  //
-//////////////////////////////////////////////////////
-void C_VFXAVIPLAYER::makeFadeBuffer(int w, int h)
-{
-	UINT8 Rs=0,Gs=0,Bs=0,R=0,G=0,B=0;
-	if(!pCurrentFadeData)
-		pCurrentFadeData = (char*)malloc(w*h*3);
-	else
-		pCurrentFadeData = (char*)realloc(pCurrentFadeData, w*h*3);
-	if(pCurrentFadeData && pFadeData)
-	{ // fade at current screen size
-		
-		// find rgb in fade buffer
-		int sourcesize=0;
-		for(int y=0;y<h;y++)
-		{
-			//for(int x=w-1;x>-1
-		}
-	}
-}
-
 /////////////////////////////////////////////
 //  copy current source buffer for fading  //
 /////////////////////////////////////////////
@@ -1657,13 +1634,21 @@ int C_VFXAVIPLAYER::render(char visdata[2][2][576], int isBeat, int *framebuffer
 				G = (pixel&0xff00)>>8;
 				B = pixel&0xff;
 			}
-
+			
+			// todo: lumas keying take more CPU than chroma ??? ... maybe use chroma technique instead of simple luminance (avoid a DIV)
 			if(config.lumablack ) {// luma on black
 				L=(R+G+B)/3; // calcul luminance simple moyenne
 				drawThisPixel= L>=config.black;
 				if(config.invblack) drawThisPixel=!drawThisPixel;
 			}
 			if(config.lumawhite && drawThisPixel) {// luma on white
+				// todo: put a debug checkbox to test diff between the 2 methods (result & cpu load)
+				
+				/* // real luminance algo
+				#define HLSMAX	240
+				#define RGBMAX	255
+				L = (((((max(max(R, G), B)) + (min(min(R, G), B))) * HLSMAX) + RGBMAX) / (2 * RGBMAX));*/
+
 				L=(R+G+B)/3; // calcul luminance simple moyenne
 				drawThisPixel= L<=0x100-config.white;
 				if(config.invwhite) drawThisPixel=!drawThisPixel;
